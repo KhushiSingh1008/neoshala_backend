@@ -2,6 +2,7 @@ export interface Course {
     id: string;
     title: string;
     instructor: string;
+    location: string;
     description: string;
     duration: string;
     level: 'Beginner' | 'Intermediate' | 'Advanced';

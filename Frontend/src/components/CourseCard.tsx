@@ -17,6 +17,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
       <div className="course-content">
         <h3 className="course-title">{course.title}</h3>
         <p className="course-instructor">By {course.instructor}</p>
+        <p className="course-location">{course.location}</p>
         <p className="course-description">{course.description}</p>
         <div className="course-meta">
           <span className="course-duration">{course.duration}</span>

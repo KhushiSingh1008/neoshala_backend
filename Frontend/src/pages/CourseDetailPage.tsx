@@ -21,10 +21,13 @@ const CourseDetailPage: React.FC = () => {
           <div className="meta">
             <span className="level">{course.level}</span>
             <span className="duration">{course.duration}</span>
+            <span className="location">{course.location}</span> {/* New location field */}
             <span className="rating">⭐ {course.rating}</span>
           </div>
+          <div className="price-section">
           <div className="price">₹{course.price.toFixed(2)}</div>
           <button className="enroll-button">Enroll Now</button>
+        </div>
         </div>
       </div>
       
