@@ -16,7 +16,7 @@ const Navbar: React.FC<NavbarProps> = ({ isLoggedIn = false }) => {
       
       <div className="navbar-links">
         <a href="/" className="nav-link">Home</a>
-        <a href="/about" className="nav-link">About Us</a>
+        <a href="#why-neoshala" className="nav-link">About Us</a>
         <a href="/search" className="nav-link">Search</a>
         <a href="/courses" className="nav-link">My Courses</a>
         <a href="/explore" className="nav-link">Explore</a>
