@@ -1,30 +1,49 @@
 import React from 'react';
-import './Navbar.css';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { logout } from '../services/authService';
 import logo from '../assets/logo.svg';
+import './Navbar.css';
 
-interface NavbarProps {
-  isLoggedIn?: boolean;
-}
+const Navbar: React.FC = () => {
+  const { currentUser, userRole } = useAuth();
 
-const Navbar: React.FC<NavbarProps> = ({ isLoggedIn = false }) => {
   return (
     <nav className="navbar">
       <div className="navbar-logo">
-        <img src={logo} alt="Logo" className="logo-img" />
-        <span className="navbar-brand">Neoshala</span>
+        <Link to="/">
+          <img src={logo} alt="Logo" className="logo-img" />
+          <span className="navbar-brand">Neoshala</span>
+        </Link>
       </div>
       
       <div className="navbar-links">
-        <a href="/" className="nav-link">Home</a>
+        <Link to="/" className="nav-link">Home</Link>
         <a href="#why-neoshala" className="nav-link">About Us</a>
-        <a href="/search" className="nav-link">Search</a>
-        <a href="/courses" className="nav-link">My Courses</a>
-        <a href="/explore" className="nav-link">Explore</a>
+        <Link to="/explore" className="nav-link">Explore</Link>
         
-        {isLoggedIn ? (
-          <a href="/profile" className="nav-link profile-link">Profile</a>
+        {currentUser ? (
+          <>
+            {userRole === 'student' && (
+              <>
+                <Link to="/my-courses" className="nav-link">My Courses</Link>
+                <Link to="/favourites" className="nav-link">Favorites</Link>
+              </>
+            )}
+            {userRole === 'instructor' && (
+              <Link to="/added-courses" className="nav-link">My Courses</Link>
+            )}
+            <Link to="/profile" className="nav-link profile-link">
+              Profile
+            </Link>
+            <button onClick={logout} className="logout-button">
+              Logout
+            </button>
+          </>
         ) : (
-          <a href="/auth" className="nav-link auth-link">Sign Up / Sign In</a>
+          <Link to="/AuthPage" className="nav-link auth-link">
+            Sign Up / Sign In
+          </Link>
         )}
       </div>
     </nav>

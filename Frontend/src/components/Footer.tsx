@@ -1,5 +1,6 @@
 // Footer.tsx
 import './Footer.css';
+import logo from '../assets/logo.svg'
 import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from 'react-icons/fa'; // Using react-icons for social media icons
 
 const Footer = () => {
@@ -9,7 +10,7 @@ const Footer = () => {
         {/* Column 1: Logo and Description */}
         <div className="footer-column">
           <div className="footer-logo">
-            <span className="logo-icon">▲</span> {/* Placeholder for logo icon */}
+            <img src={logo} alt="Neoshala Logo" className="logo-img" />
             <span className="logo-text">NEOSHALA</span>
           </div>
           <p className="footer-tagline">Neoshala - Skills for a Lifetime</p>
@@ -22,8 +23,8 @@ const Footer = () => {
         <div className="footer-column">
           <h3 className="footer-heading">Quick Links</h3>
           <ul className="footer-links">
-            <li><a href="#home">Home</a></li>
-            <li><a href="#about">About Us</a></li>
+            <li><a href="/">Home</a></li>
+            <li><a href="#why-neoshala">About Us</a></li>
             <li><a href="#programs">Programs</a></li>
             <li><a href="#blogs">Blogs & Insights</a></li>
             <li><a href="#contact">Contact</a></li>

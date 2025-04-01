@@ -1,0 +1,222 @@
+.profile-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .profile-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .profile-avatar {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid #1E90FF;
+  }
+  
+  .profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1E90FF;
+    color: white;
+    font-size: 2.5rem;
+    font-weight: bold;
+  }
+  
+  .user-role {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    background-color: #f0f0f0;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    text-transform: capitalize;
+  }
+  
+  .profile-content {
+    margin: 2rem 0;
+  }
+  
+  .profile-form .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .profile-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #555;
+    font-weight: 500;
+  }
+  
+  .profile-form input,
+  .profile-form textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  
+  .profile-form input:focus,
+  .profile-form textarea:focus {
+    outline: none;
+    border-color: #1E90FF;
+    box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.2);
+  }
+  
+  .profile-form textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+  
+  .profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .info-item {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .bio-item {
+    flex-direction: column;
+  }
+  
+  .info-label {
+    font-weight: 600;
+    color: #555;
+    min-width: 100px;
+  }
+  
+  .info-value {
+    color: #333;
+  }
+  
+  .profile-actions {
+    margin-top: 2rem;
+    text-align: center;
+  }
+  
+  .edit-button,
+  .save-button {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .edit-button {
+    background-color: #1E90FF;
+    color: white;
+  }
+  
+  .edit-button:hover {
+    background-color: #4169E1;
+    transform: translateY(-2px);
+  }
+  
+  .save-button {
+    background-color: #2ed573;
+    color: white;
+  }
+  
+  .save-button:hover {
+    background-color: #25b864;
+  }
+  
+  button[type="button"] {
+    background-color: #f1f2f6;
+    color: #555;
+  }
+  
+  button[type="button"]:hover {
+    background-color: #dfe4ea;
+  }
+  
+  .instructor-stats {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+  }
+  
+  .instructor-stats h3 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #333;
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .stat-card {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    transition: transform 0.3s ease;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1E90FF;
+    margin-bottom: 0.5rem;
+  }
+  
+  .stat-label {
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .profile-container {
+      padding: 1.5rem;
+      margin: 1rem;
+    }
+    
+    .info-item {
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+  }

@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User-specific documents
+    match /users/{userId} {
+      // Only the logged-in user can read/write their own document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Courses collection
+    match /courses/{courseId} {
+      // Only instructors can create/update courses
+      allow create, update: if 
+        request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "instructor";
+      
+      // Published courses are readable by everyone
+      allow read: if resource.data.published == true;
+      
+      // Additional rule: Only course owner can delete
+      allow delete: if request.auth.uid == resource.data.instructorId;
+    }
+  }
+}
