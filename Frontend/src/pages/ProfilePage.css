@@ -1,222 +1,296 @@
 .profile-container {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.profile-header {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 1rem;
+  padding: 2rem;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.profile-picture-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-picture {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.profile-picture.updating {
+  opacity: 0.5;
+}
+
+.change-picture-btn {
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.change-picture-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.change-picture-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.profile-info {
+  flex: 1;
+  margin-left: 2rem;
+}
+
+.profile-name {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.profile-role {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  text-transform: capitalize;
+}
+
+.edit-profile-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: white;
+  color: #4f46e5;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-profile-btn:hover {
+  background-color: #4f46e5;
+  color: white;
+}
+
+.profile-form {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.button-group button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.button-group button[type="submit"] {
+  background-color: #28a745;
+  color: white;
+}
+
+.button-group button[type="button"] {
+  background-color: #dc3545;
+  color: white;
+}
+
+.profile-info-display {
+  padding: 1rem;
+}
+
+.profile-info-display p {
+  margin: 0.5rem 0;
+}
+
+.profile-info-display button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.profile-details {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.detail-group {
+  display: flex;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.detail-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.detail-label {
+  width: 120px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.detail-value {
+  flex: 1;
+  color: #1f2937;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 0.25rem solid #e5e7eb;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
-  
+}
+
+@media (max-width: 640px) {
   .profile-header {
+    flex-direction: column;
     text-align: center;
-    margin-bottom: 2rem;
+    padding: 1.5rem;
   }
-  
-  .profile-avatar {
+
+  .profile-picture {
     width: 120px;
     height: 120px;
-    margin: 0 auto 1rem;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 4px solid #1E90FF;
   }
-  
-  .profile-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+
+  .edit-profile-btn {
+    position: static;
+    margin-top: 1rem;
   }
-  
-  .avatar-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #1E90FF;
-    color: white;
-    font-size: 2.5rem;
-    font-weight: bold;
-  }
-  
-  .user-role {
-    display: inline-block;
-    padding: 0.3rem 0.8rem;
-    background-color: #f0f0f0;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-    text-transform: capitalize;
-  }
-  
-  .profile-content {
-    margin: 2rem 0;
-  }
-  
-  .profile-form .form-group {
-    margin-bottom: 1.5rem;
-  }
-  
-  .profile-form label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #555;
-    font-weight: 500;
-  }
-  
-  .profile-form input,
-  .profile-form textarea {
-    width: 100%;
-    padding: 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-  }
-  
-  .profile-form input:focus,
-  .profile-form textarea:focus {
-    outline: none;
-    border-color: #1E90FF;
-    box-shadow: 0 0 0 2px rgba(30, 144, 255, 0.2);
-  }
-  
-  .profile-form textarea {
-    resize: vertical;
-    min-height: 100px;
-  }
-  
-  .form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-  
-  .profile-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  
-  .info-item {
-    display: flex;
-    gap: 1rem;
-  }
-  
-  .bio-item {
+
+  .detail-group {
     flex-direction: column;
   }
-  
-  .info-label {
-    font-weight: 600;
-    color: #555;
-    min-width: 100px;
+
+  .detail-label {
+    width: auto;
+    margin-bottom: 0.25rem;
   }
-  
-  .info-value {
-    color: #333;
-  }
-  
-  .profile-actions {
-    margin-top: 2rem;
-    text-align: center;
-  }
-  
-  .edit-button,
-  .save-button {
-    padding: 0.8rem 1.5rem;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  
-  .edit-button {
-    background-color: #1E90FF;
-    color: white;
-  }
-  
-  .edit-button:hover {
-    background-color: #4169E1;
-    transform: translateY(-2px);
-  }
-  
-  .save-button {
-    background-color: #2ed573;
-    color: white;
-  }
-  
-  .save-button:hover {
-    background-color: #25b864;
-  }
-  
-  button[type="button"] {
-    background-color: #f1f2f6;
-    color: #555;
-  }
-  
-  button[type="button"]:hover {
-    background-color: #dfe4ea;
-  }
-  
-  .instructor-stats {
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid #eee;
-  }
-  
-  .instructor-stats h3 {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    color: #333;
-  }
-  
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-  }
-  
-  .stat-card {
-    background-color: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 8px;
-    text-align: center;
-    transition: transform 0.3s ease;
-  }
-  
-  .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .stat-number {
-    display: block;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1E90FF;
-    margin-bottom: 0.5rem;
-  }
-  
-  .stat-label {
-    color: #666;
-    font-size: 0.9rem;
-  }
-  
-  /* Responsive Design */
-  @media (max-width: 768px) {
-    .profile-container {
-      padding: 1.5rem;
-      margin: 1rem;
-    }
-    
-    .info-item {
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-    
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+}
+
+.enrolled-courses {
+  margin-top: 2rem;
+}
+
+.enrolled-courses h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1.5rem;
+}
+
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.course-card {
+  background-color: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-4px);
+}
+
+.course-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+}
+
+.course-card p {
+  color: #4b5563;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.course-meta span {
+  background-color: #f3f4f6;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+}

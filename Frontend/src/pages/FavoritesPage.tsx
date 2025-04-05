@@ -6,7 +6,7 @@ import { MdCategory } from 'react-icons/md';
 import { toast } from 'react-toastify';
 import './MyCoursesU.css';  // We'll reuse the same styles
 
-const FavouritesU = () => {
+const FavoritesPage = () => {
   const { user, token } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,4 +137,4 @@ const FavouritesU = () => {
   );
 };
 
-export default FavouritesU;
+export default FavoritesPage; 

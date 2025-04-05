@@ -25,24 +25,10 @@ const Footer = () => {
           <ul className="footer-links">
             <li><a href="/">Home</a></li>
             <li><a href="#why-neoshala">About Us</a></li>
-            <li><a href="#programs">Programs</a></li>
-            <li><a href="#blogs">Blogs & Insights</a></li>
-            <li><a href="#contact">Contact</a></li>
           </ul>
         </div>
 
-        {/* Column 3: Important Links */}
-        <div className="footer-column">
-          <h3 className="footer-heading">Important Links</h3>
-          <ul className="footer-links">
-            <li><a href="#terms">Terms and Conditions</a></li>
-            <li><a href="#legal">Legal</a></li>
-            <li><a href="#business">Business</a></li>
-            <li><a href="#partners">Partners</a></li>
-          </ul>
-        </div>
-
-        {/* Column 4: Social Media */}
+        {/* Column 3: Social Media */}
         <div className="footer-column">
           <h3 className="footer-heading">Let's Stay Connected!</h3>
           <p className="footer-subtext">Reach out to explore, learn, and grow with Neoshala!</p>

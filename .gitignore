@@ -1,0 +1,13 @@
+# Backend
+Backend/.env
+Backend/node_modules/
+Backend/uploads/
+Backend/package-lock.json  (Optional - lockfiles can be committed)
+
+# Frontend
+Frontend/node_modules/
+Frontend/.env
+
+# General
+.vscode/
+**/.DS_Store

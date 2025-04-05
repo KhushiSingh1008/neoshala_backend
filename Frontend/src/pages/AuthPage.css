@@ -1,126 +1,319 @@
-.auth-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #f5f5f5;
+/* Root container for the authentication page */
+.min-h-screen {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%); /* Subtle gradient for depth */
+  padding: 2rem 1rem; /* Override Tailwind's padding for consistency */
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* Card container for the form */
+.max-w-md {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* Softer, more natural shadow */
+  width: 100%;
+  max-width: 400px; /* Slightly narrower for better focus */
+  padding: 2.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.max-w-md:hover {
+  transform: translateY(-3px); /* Subtle lift effect on hover */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Heading */
+.text-3xl {
+  color: #1f2937; /* Darker gray for better contrast */
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 1.5rem;
+}
+
+/* Form styling */
+.mt-8 {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Replace Tailwind's space-y-6 with a more controlled gap */
+  margin-top: 2rem;
+}
+
+/* Input group container */
+.rounded-md.shadow-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; /* Add spacing between inputs, override -space-y-px */
+}
+
+/* Input styles */
+input,
+select {
+  padding: 0.875rem 1rem !important; /* Override Tailwind's padding */
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important; /* Consistent rounded corners */
+  font-size: 1rem !important;
+  color: #1f2937 !important;
+  background: #f9fafb !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+input:focus,
+select:focus {
+  outline: none !important;
+  border-color: #1E90FF !important; /* NeoShala's brand blue */
+  box-shadow: 0 0 0 3px rgba(30, 144, 255, 0.1) !important;
+  background: #ffffff !important;
+}
+
+/* Remove Tailwind's rounded-none and rounded-t-md/rounded-b-md for consistency */
+input.rounded-none,
+input.rounded-t-md,
+input.rounded-b-md,
+select.rounded-none,
+select.rounded-b-md {
+  border-radius: 6px !important;
+}
+
+/* Placeholder styles */
+input::placeholder,
+select:invalid {
+  color: #9ca3af !important; /* Softer gray for placeholders */
+  font-style: italic;
+}
+
+/* Select dropdown styling */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234b5563' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.25rem;
+}
+
+/* Submit button */
+button[type="submit"] {
+  background: #1E90FF !important; /* NeoShala's brand blue */
+  color: #ffffff !important;
+  border: none !important;
+  padding: 0.875rem !important;
+  border-radius: 6px !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.1s ease !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+button[type="submit"]:hover {
+  background: #4169E1 !important;
+  transform: translateY(-1px);
+}
+
+button[type="submit"]:active {
+  transform: translateY(0);
+}
+
+button[type="submit"]:disabled {
+  background: #93c5fd !important;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Toggle link (Sign in/Sign up) */
+.text-indigo-600 {
+  color: #1E90FF !important; /* NeoShala's brand blue */
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.text-indigo-600:hover {
+  color: #4169E1 !important;
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .max-w-md {
+    padding: 1.5rem;
+    max-width: 90%;
   }
-  
-  .auth-card {
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 450px;
-    padding: 2rem;
+
+  .text-3xl {
+    font-size: 1.5rem;
   }
-  
-  .auth-tabs {
-    display: flex;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
+
+  input,
+  select {
+    padding: 0.75rem 1rem !important;
   }
-  
-  .tab {
-    flex: 1;
-    padding: 0.75rem;
-    text-align: center;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-weight: 600;
-    color: #666;
-    position: relative;
-  }
-  
-  .tab.active {
-    color: #3f51b5;
-  }
-  
-  .tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #3f51b5;
-  }
-  
-  .auth-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-  
-  .auth-form h2 {
-    margin: 0;
-    color: #333;
-    text-align: center;
-  }
-  
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .form-group label {
-    font-size: 0.9rem;
-    color: #555;
-  }
-  
-  .form-group input {
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
-  }
-  
-  .form-group input:focus {
-    outline: none;
-    border-color: #3f51b5;
-    box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.2);
-  }
-  
+
   button[type="submit"] {
-    background: #3f51b5;
-    color: white;
-    border: none;
-    padding: 0.75rem;
-    border-radius: 5px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
+    padding: 0.75rem !important;
   }
-  
-  button[type="submit"]:hover {
-    background: #303f9f;
+}
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+  padding: 1rem;
+}
+
+.auth-card {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+  color: #4a5568;
+  font-size: 0.875rem;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  background-color: white;
+  transition: border-color 0.2s;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.submit-button {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.submit-button:hover {
+  background-color: #4338ca;
+}
+
+.submit-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.toggle-auth {
+  margin-top: 1rem;
+  text-align: center;
+  color: #4a5568;
+  font-size: 0.875rem;
+}
+
+.toggle-button {
+  color: #4f46e5;
+  font-weight: 500;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.25rem;
+  cursor: pointer;
+}
+
+.toggle-button:hover {
+  text-decoration: underline;
+}
+
+.error-message {
+  color: #e53e3e;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0.25rem solid #e2e8f0;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
-  
-  button[type="submit"]:disabled {
-    background: #9fa8da;
-    cursor: not-allowed;
-  }
-  
-  .error {
-    color: #d32f2f;
-    background: #ffebee;
-    padding: 0.75rem;
-    border-radius: 5px;
-    font-size: 0.9rem;
-  }
-  
-  .role-options {
-    display: flex;
-    gap: 1rem;
-    margin-top: 0.5rem;
-  }
-  
-  .role-options label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-  }
+}

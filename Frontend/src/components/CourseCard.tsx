@@ -1,28 +1,45 @@
 import React from 'react';
-import { Course } from '../Types/Course';
+import { Link } from 'react-router-dom';
 import './CourseCard.css';
+import reactLogo from '../assets/react-logo.svg';
 
 interface CourseCardProps {
-  course: Course;
-  onClick: (courseId: string) => void;
+  id: string;
+  title: string;
+  instructor: string;
+  location: string;
+  description: string;
+  duration: string;
+  price: number;
+  rating: number;
 }
 
-const CourseCard: React.FC<CourseCardProps> = ({ course, onClick }) => {
+const CourseCard: React.FC<CourseCardProps> = ({
+  id,
+  title,
+  instructor,
+  location,
+  description,
+  duration,
+  price,
+  rating
+}) => {
   return (
-    <div className="course-card" onClick={() => onClick(course.id)}>
-      <div className="course-image-container">
-        <img src={course.imageUrl} alt={course.title} className="course-image" />
-        <span className="course-level">{course.level}</span>
+    <div className="course-card">
+      <div className="course-image">
+        <img src={reactLogo} alt={title} />
       </div>
       <div className="course-content">
-        <h3 className="course-title">{course.title}</h3>
-        <p className="course-instructor">By {course.instructor}</p>
-        <p className="course-location">{course.location}</p>
-        <p className="course-description">{course.description}</p>
+        <h3 className="course-title">{title}</h3>
+        <p className="course-instructor">By {instructor}</p>
+        <p className="course-location">{location}</p>
+        <p className="course-description">{description}</p>
         <div className="course-meta">
-          <span className="course-duration">{course.duration}</span>
-          <span className="course-rating">⭐ {course.rating}</span>
-          <span className="course-price">₹{course.price.toFixed(2)}</span>
+          <span className="course-duration">{duration}</span>
+          <div className="course-price">
+            <span className="course-rating">⭐ {rating.toFixed(1)}</span>
+            ₹{price.toFixed(2)}
+          </div>
         </div>
       </div>
     </div>

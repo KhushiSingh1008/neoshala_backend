@@ -7,11 +7,12 @@
   }
   
   .footer-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 2rem;
     max-width: 1200px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 2rem;
+    padding: 0 1rem;
   }
   
   /* Column Styling */
@@ -133,7 +134,7 @@
   @media (max-width: 768px) {
     .footer-container {
       grid-template-columns: 1fr;
-      text-align: center;
+      gap: 1.5rem;
     }
   
     .footer-logo {
