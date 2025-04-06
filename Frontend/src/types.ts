@@ -3,13 +3,15 @@ export interface User {
   _id: string;
   username: string;
   email: string;
-  role: 'student' | 'instructor';
+  role: 'student' | 'instructor' | 'admin';
   location?: string;
   age?: number;
   bio?: string;
   profilePicture?: string;
   emailNotifications?: boolean;
   createdAt?: Date;
+  isVerified?: boolean;
+  createdCourses?: string[];
 }
 
 export interface Course {
@@ -38,6 +40,9 @@ export interface Course {
   createdAt: Date;
   updatedAt: Date;
   thumbnail?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  enrollments?: Enrollment[];
 }
 
 export interface Review {
@@ -90,9 +95,23 @@ export interface ProfileUpdateData {
   location?: string;
   age?: number;
   bio?: string;
+  emailNotifications?: boolean;
 }
 
 export interface ProfilePictureResponse {
   user: User;
   message?: string;
+}
+
+export interface Enrollment {
+  _id: string;
+  student: string | User;
+  course: string | Course;
+  enrollmentDate: Date;
+  paymentDetails?: {
+    paymentId: string;
+    amount: number;
+    paymentMethod: string;
+    date: Date;
+  };
 } 

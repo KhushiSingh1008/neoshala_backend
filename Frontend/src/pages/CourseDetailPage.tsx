@@ -73,7 +73,13 @@ const CourseDetailPage = () => {
     <div className="course-detail">
       <div className="course-header">
         <img
-          src={course.imageUrl?.startsWith('http') ? course.imageUrl : `http://localhost:5000${course.imageUrl}` || 'https://via.placeholder.com/600x450'}
+          src={
+            course.imageUrl 
+              ? (course.imageUrl.startsWith('http') 
+                ? course.imageUrl 
+                : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${course.imageUrl}`)
+              : 'https://via.placeholder.com/600x450'
+          }
           alt={course.title}
           className="course-detail-image"
           onError={(e) => {

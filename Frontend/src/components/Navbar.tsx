@@ -6,6 +6,7 @@ import { FaShoppingCart, FaBars, FaTimes } from 'react-icons/fa';
 import { NotificationBell } from './NotificationBell';
 import logo from '../assets/logo.svg';
 import './Navbar.css';
+import styled from 'styled-components';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -75,7 +76,12 @@ const Navbar: React.FC = () => {
             {user.role === 'instructor' && (
               <Link to="/added-courses" className="nav-link" onClick={() => setIsMenuOpen(false)}>My Courses</Link>
             )}
-            <NotificationBell />
+            {user.role === 'admin' && (
+              <Link to="/admin/dashboard" className="nav-link" onClick={() => setIsMenuOpen(false)}>Admin Dashboard</Link>
+            )}
+            <div className="notification-container">
+              <NotificationBell />
+            </div>
             <Link to="/profile" className="nav-link profile-link" onClick={() => setIsMenuOpen(false)}>
               Profile
             </Link>
@@ -94,3 +100,12 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
+
+export const StyledNavbar = styled.nav`
+  .notification-container {
+    position: relative;
+    margin: 0 10px;
+    display: flex;
+    align-items: center;
+  }
+`;

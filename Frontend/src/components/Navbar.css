@@ -172,6 +172,14 @@ body {
   justify-content: center;
 }
 
+/* Notification container styles */
+.notification-container {
+  position: relative;
+  margin: 0 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
 /* Notification bell styles */
 .notification-bell {
   position: relative;
@@ -270,6 +278,11 @@ body {
   .cart-count {
     position: static;
     margin-left: 0.5rem;
+  }
+
+  .notification-container {
+    margin: 0.5rem 0;
+    align-self: flex-start;
   }
 
   .notification-bell {

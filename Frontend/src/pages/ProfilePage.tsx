@@ -1,14 +1,77 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile, uploadProfilePicture } from '../services/api';
+import { updateProfile, uploadProfilePicture, updateEmailNotifications } from '../services/api';
 import { toast } from 'react-toastify';
 import { Course, User, ProfileUpdateData } from '../types';
 import { FaUser, FaEnvelope, FaMapMarkerAlt, FaBirthdayCake, FaEdit, FaCamera, FaBook, FaGraduationCap, FaFileAlt } from 'react-icons/fa';
+import styled from 'styled-components';
 import './ProfilePage.css';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const ProfilePage: React.FC = () => {
+const ProfileInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+`;
+
+const EmailNotificationSection = styled.div`
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  border: 1px solid #eaeaea;
+`;
+
+const NotificationHeading = styled.h3`
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const ToggleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+`;
+
+interface SwitchProps {
+  $isActive: boolean;
+}
+
+const Switch = styled.div<SwitchProps>`
+  position: relative;
+  width: 60px;
+  height: 30px;
+  background-color: ${props => props.$isActive ? '#4a154b' : '#ccc'};
+  border-radius: 30px;
+  padding: 4px;
+  transition: all 0.3s;
+  cursor: pointer;
+  
+  &:after {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background-color: white;
+    top: 4px;
+    left: ${props => props.$isActive ? '34px' : '4px'};
+    transition: all 0.3s;
+  }
+`;
+
+const Label = styled.span`
+  margin-left: 10px;
+  font-size: 16px;
+  color: #666;
+`;
+
+const ProfilePage = () => {
   const { user, token, updateUserData } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedUser, setEditedUser] = useState<Partial<User>>({
@@ -29,13 +92,18 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
+      console.log('Initializing user data from context:', user);
+      
+      // Default emailNotifications to true if undefined
+      const emailNotificationsValue = user.emailNotifications === false ? false : true;
+      
       setEditedUser({
         username: user.username || '',
         email: user.email || '',
         location: user.location || '',
         age: user.age,
         bio: user.bio || '',
-        emailNotifications: user.emailNotifications || true
+        emailNotifications: emailNotificationsValue
       });
 
       // Set profile picture URL
@@ -59,7 +127,7 @@ const ProfilePage: React.FC = () => {
         
         // Fetch created courses if user is an instructor
         if (user.role === 'instructor') {
-          const createdResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/courses/instructor/${user._id}`, {
+          const createdResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/courses/instructor/${user._id}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -68,11 +136,14 @@ const ProfilePage: React.FC = () => {
           if (createdResponse.ok) {
             const createdData = await createdResponse.json();
             setCreatedCourses(createdData);
+            console.log('Fetched created courses:', createdData);
+          } else {
+            console.error('Failed to fetch created courses');
           }
         }
         
         // Fetch enrolled courses for all users
-        const enrolledResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/courses/student/${user._id}`, {
+        const enrolledResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/courses/student/${user._id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -84,6 +155,7 @@ const ProfilePage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching courses:', error);
+        toast.error('Failed to fetch your courses. Please try again later.');
       } finally {
         setIsLoadingCourses(false);
       }
@@ -94,13 +166,16 @@ const ProfilePage: React.FC = () => {
 
   const handleEdit = () => {
     if (user) {
+      // Default emailNotifications to true if undefined, but respect the current value if set
+      const emailNotificationsValue = user.emailNotifications === false ? false : true;
+      
       setEditedUser({
         username: user.username || '',
         email: user.email || '',
         location: user.location || '',
         age: user.age,
         bio: user.bio || '',
-        emailNotifications: user.emailNotifications || true
+        emailNotifications: emailNotificationsValue
       });
       setIsEditing(true);
     }
@@ -116,13 +191,16 @@ const ProfilePage: React.FC = () => {
 
   const handleCancel = () => {
     if (user) {
+      // Default emailNotifications to true if undefined, but respect the current value if set
+      const emailNotificationsValue = user.emailNotifications === false ? false : true;
+      
       setEditedUser({
         username: user.username || '',
         email: user.email || '',
         location: user.location || '',
         age: user.age,
         bio: user.bio || '',
-        emailNotifications: user.emailNotifications || true
+        emailNotifications: emailNotificationsValue
       });
     }
     setIsEditing(false);
@@ -176,21 +254,20 @@ const ProfilePage: React.FC = () => {
     }
 
     try {
-      const updatedFields = Object.entries(editedUser).reduce<Partial<User>>((acc, [key, value]) => {
-        if (value !== undefined && value !== '' && value !== (user?.[key as keyof User] || '')) {
-          acc[key as keyof User] = value as any;
-        }
-        return acc;
-      }, {});
+      // Prepare data for update - only including fields that can be updated according to the ProfileUpdateData interface
+      const profileData: ProfileUpdateData = {
+        location: editedUser.location,
+        age: editedUser.age,
+        bio: editedUser.bio,
+        emailNotifications: editedUser.emailNotifications
+      };
 
-      if (Object.keys(updatedFields).length === 0) {
-        toast.info('No changes to save');
-        setIsEditing(false);
-        return;
-      }
-
-      const updatedUser = await updateProfile(token, updatedFields as ProfileUpdateData);
+      console.log('Updating profile with data:', profileData);
       
+      // Call the API
+      const updatedUser = await updateProfile(token, profileData);
+      
+      // Update the user context
       if (updateUserData && updatedUser) {
         updateUserData(updatedUser);
       }
@@ -217,7 +294,8 @@ const ProfilePage: React.FC = () => {
       const response = await fetch(`${API_URL}/api/courses/${courseId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
@@ -227,11 +305,53 @@ const ProfilePage: React.FC = () => {
         toast.success('Course removed successfully');
       } else {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to remove course');
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          toast.error('Authentication required. Please log in again.');
+          // Could redirect to login here
+        } else if (response.status === 403) {
+          toast.error('You do not have permission to delete this course.');
+        } else if (response.status === 404) {
+          toast.error('Course not found. It may have been already deleted.');
+          // Remove from local state since it doesn't exist anymore
+          setCreatedCourses(prev => prev.filter(course => course._id !== courseId));
+        } else {
+          throw new Error(error.message || 'Failed to remove course');
+        }
       }
     } catch (error) {
       console.error('Error removing course:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to remove course');
+    }
+  };
+
+  const handleToggleEmailNotifications = async () => {
+    if (!token || !user) return;
+    
+    try {
+      // Get current status from user object
+      const currentStatus = user.emailNotifications === true;
+      // Toggle to opposite value
+      const newStatus = !currentStatus;
+      
+      console.log('Toggling email notifications from', currentStatus, 'to', newStatus);
+      
+      // Make API call with clear boolean value
+      const result = await updateEmailNotifications(token, newStatus);
+      
+      // Update user context with new value from server response
+      if (updateUserData) {
+        updateUserData({
+          ...user,
+          emailNotifications: result.emailNotifications
+        });
+      }
+      
+      toast.success(result.message);
+    } catch (error) {
+      console.error('Error updating email notifications:', error);
+      toast.error('Failed to update email notification settings');
     }
   };
 
@@ -294,11 +414,14 @@ const ProfilePage: React.FC = () => {
               <input
                 type="checkbox"
                 name="emailNotifications"
-                checked={editedUser.emailNotifications ?? true}
-                onChange={(e) => setEditedUser(prev => ({
-                  ...prev,
-                  emailNotifications: e.target.checked
-                }))}
+                checked={editedUser.emailNotifications === true}
+                onChange={(e) => {
+                  console.log('Checkbox changed to:', e.target.checked);
+                  setEditedUser(prev => ({
+                    ...prev,
+                    emailNotifications: e.target.checked
+                  }));
+                }}
               />
               Receive email notifications
             </label>
@@ -346,12 +469,22 @@ const ProfilePage: React.FC = () => {
             <span className="info-value">{user.bio}</span>
           </div>
         )}
-        <div className="info-item">
-          <span className="info-label">Email Notifications:</span>
-          <span className="info-value">
-            {user.emailNotifications ? 'Enabled' : 'Disabled'}
-          </span>
-        </div>
+        <EmailNotificationSection>
+          <NotificationHeading>
+            Email Notifications:
+          </NotificationHeading>
+          <p style={{ margin: '5px 0', color: '#666' }}>
+            {user?.emailNotifications === true 
+              ? 'Enabled - You will receive email notifications for course purchases and updates.' 
+              : 'Disabled - You will not receive email notifications.'}
+          </p>
+          <ToggleContainer onClick={handleToggleEmailNotifications}>
+            <Switch $isActive={user?.emailNotifications === true} />
+            <Label>
+              {user?.emailNotifications === true ? 'Enabled' : 'Disabled'}
+            </Label>
+          </ToggleContainer>
+        </EmailNotificationSection>
         <button onClick={handleEdit} className="edit-profile-btn">
           <FaEdit /> Edit Profile
         </button>
@@ -378,7 +511,7 @@ const ProfilePage: React.FC = () => {
               <h2><FaBook /> Created Courses</h2>
               <button 
                 className="add-course-btn"
-                onClick={() => window.location.href = '/add-course'}
+                onClick={() => window.location.href = '/added-courses'}
               >
                 Add New Course
               </button>

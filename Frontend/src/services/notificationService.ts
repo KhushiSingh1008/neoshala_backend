@@ -1,8 +1,9 @@
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
-import { app } from '../firebase/firebaseConfig';
 import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase/firebaseConfig';
+import { db, app } from '../firebase/firebaseConfig';
 import { toast } from 'react-toastify';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const messaging = getMessaging(app);
 
@@ -62,7 +63,7 @@ export const onMessageListener = () => {
 export const saveNotification = async (userId: string, notification: {
   title: string;
   body: string;
-  type: 'course_purchase' | 'payment_confirmation';
+  type: 'course_purchase' | 'payment_confirmation' | 'course_update';
   data?: any;
 }) => {
   try {
@@ -108,5 +109,68 @@ export const sendCoursePurchaseNotification = async (
   } catch (error) {
     console.error('Error sending course purchase notification:', error);
     // Don't throw error here to prevent blocking the main flow
+  }
+};
+
+// Function for course rejection notification
+export const sendCourseRejectionNotification = async (
+  userId: string,
+  courseTitle: string,
+  rejectionReason: string
+) => {
+  try {
+    const notification = {
+      title: 'Course Rejected',
+      body: `Your course "${courseTitle}" has been rejected. Reason: ${rejectionReason}`,
+      type: 'course_update' as const,
+      data: {
+        courseTitle,
+        rejectionReason,
+        status: 'rejected'
+      }
+    };
+
+    const notificationId = await saveNotification(userId, notification);
+    if (notificationId) {
+      toast.error('Your course was rejected');
+    }
+  } catch (error) {
+    console.error('Error sending course rejection notification:', error);
+    // Don't throw error here to prevent blocking the main flow
+  }
+};
+
+// Function to get notifications for a user
+export const getNotificationsForUser = async (userId: string) => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    if (!token || !userId) {
+      console.error('Missing token or userId for fetching notifications');
+      return { notifications: [], unreadCount: 0 };
+    }
+    
+    console.log(`Fetching notifications for user ${userId}`);
+    
+    const response = await fetch(`${API_URL}/api/notifications/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error response from notifications API:', errorData);
+      throw new Error(errorData.message || 'Failed to fetch notifications');
+    }
+    
+    const data = await response.json();
+    console.log('Notifications fetched successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error);
+    return { notifications: [], unreadCount: 0 };
   }
 }; 

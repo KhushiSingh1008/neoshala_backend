@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { enrollInCourse } from '../services/api';
-import { sendCoursePurchaseNotification } from '../services/notificationService';
 import { toast } from 'react-toastify';
 import { Course } from '../types';
 import './CheckoutPage.css';
@@ -68,33 +67,24 @@ const CheckoutPage = () => {
       // First, try to enroll in all courses
       for (const course of cartItems) {
         try {
-          const response = await enrollInCourse(course._id, user!._id, token!, paymentDetails);
+          const response = await enrollInCourse(
+            course._id, 
+            token!, 
+            paymentDetails
+          );
           enrollmentResults.push(response);
+          
+          // Show toast with message from server
+          if (response.message) {
+            toast.success(response.message);
+          }
         } catch (error: any) {
           // If enrollment fails for any course, throw error with details
           throw new Error(`Failed to enroll in ${course.title}: ${error.message}`);
         }
       }
       
-      // If all enrollments are successful, send notifications
-      for (const course of cartItems) {
-        try {
-          await sendCoursePurchaseNotification(
-            user!._id,
-            course.title,
-            {
-              amount: course.price,
-              currency: 'INR',
-              transactionId
-            }
-          );
-        } catch (error) {
-          console.error('Error sending notification:', error);
-          // Don't throw error here, as enrollment was successful
-        }
-      }
-      
-      // If we get here, all enrollments were successful
+      // If all enrollments are successful
       // Set payment details for receipt
       setPaymentDetails({
         transactionId,
@@ -112,7 +102,7 @@ const CheckoutPage = () => {
       // Clear cart after successful payment
       clearCart();
       
-      toast.success('Payment successful! You are now enrolled in the course(s).');
+      toast.success('Payment successful! You have been enrolled in the course(s).');
     } catch (error: any) {
       console.error('Payment or enrollment failed:', error);
       

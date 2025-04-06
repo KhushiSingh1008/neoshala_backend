@@ -5,8 +5,22 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
-    const error: ApiError = await response.json();
-    throw new Error(error.message || 'An error occurred');
+    const errorData: ApiError = await response.json();
+    
+    // Format error message
+    let errorMessage = errorData.message || 'An error occurred';
+    
+    // Handle validation errors with multiple fields
+    if (errorData.errors) {
+      errorMessage = Object.entries(errorData.errors)
+        .map(([field, message]) => `${field}: ${message}`)
+        .join(', ');
+    }
+    
+    const error = new Error(errorMessage);
+    // @ts-ignore - Add the full error data to the error object
+    error.data = errorData;
+    throw error;
   }
   return response.json();
 };
@@ -46,35 +60,62 @@ export const getCourseById = async (id: string): Promise<Course> => {
 };
 
 export const createCourse = async (courseData: CourseFormData, token: string): Promise<Course> => {
-  const response = await fetch(`${API_URL}/api/courses`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(courseData),
-  });
-  return handleResponse<Course>(response);
+  try {
+    // Ensure price is a number
+    const processedData = {
+      ...courseData,
+      price: typeof courseData.price === 'string' ? parseFloat(courseData.price) : courseData.price
+    };
+    
+    // Filter out empty syllabus and requirements
+    if (Array.isArray(processedData.syllabus)) {
+      processedData.syllabus = processedData.syllabus.filter(item => item.trim() !== '');
+    }
+    
+    if (Array.isArray(processedData.requirements)) {
+      processedData.requirements = processedData.requirements.filter(item => item.trim() !== '');
+    }
+    
+    console.log('Creating course with data:', processedData);
+    
+    const response = await fetch(`${API_URL}/api/courses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(processedData),
+    });
+    
+    return handleResponse<Course>(response);
+  } catch (error) {
+    console.error('Error creating course:', error);
+    throw error;
+  }
 };
 
-export const enrollInCourse = async (courseId: string, userId: string, token: string, paymentDetails: {
-  transactionId: string;
-  cardNumber: string;
-  cardholderName: string;
-  amount: number;
-  date: string;
-}): Promise<{ course: Course; enrollment: any }> => {
+export const enrollInCourse = async (
+  courseId: string, 
+  token: string, 
+  paymentDetails: {
+    transactionId: string;
+    cardNumber: string;
+    cardholderName: string;
+    amount: number;
+    paymentMethod?: string;
+    date?: string;
+  }
+): Promise<{ course: Course; enrollment: any; message: string }> => {
   const response = await fetch(`${API_URL}/api/courses/${courseId}/enroll`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ 
-      userId,
+    body: JSON.stringify({
       paymentDetails: {
         paymentId: paymentDetails.transactionId,
-        paymentMethod: 'card',
+        paymentMethod: paymentDetails.paymentMethod || 'card',
         transactionId: paymentDetails.transactionId,
         cardNumber: paymentDetails.cardNumber,
         cardholderName: paymentDetails.cardholderName,
@@ -82,7 +123,8 @@ export const enrollInCourse = async (courseId: string, userId: string, token: st
       }
     }),
   });
-  return handleResponse<{ course: Course; enrollment: any }>(response);
+  
+  return handleResponse<{ course: Course; enrollment: any; message: string }>(response);
 };
 
 // User API calls
@@ -127,4 +169,22 @@ export const uploadProfilePicture = async (token: string, file: File): Promise<P
   
   const data = await response.json();
   return data;
+};
+
+export const updateEmailNotifications = async (token: string, enabled: boolean): Promise<{ message: string; emailNotifications: boolean }> => {
+  console.log('Calling API to update email notifications:', enabled);
+  
+  const response = await fetch(`${API_URL}/api/users/notifications/email`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ enabled }),
+  });
+  
+  const result = await handleResponse<{ message: string; emailNotifications: boolean }>(response);
+  console.log('API response for email notifications update:', result);
+  
+  return result;
 }; 

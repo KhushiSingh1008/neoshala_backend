@@ -2,13 +2,25 @@ import express from 'express';
 import Course from '../models/Course.js';
 import CourseRating from '../models/CourseRating.js';
 import CourseEnrollment from '../models/CourseEnrollment.js';
+import mongoose from 'mongoose';
+import { authenticateToken, isInstructor } from '../middlewares/authMiddleware.js';
+import { sendCourseEnrollmentEmail } from '../services/emailService.js';
+import { 
+  createCoursePurchaseNotification, 
+  createPaymentConfirmationNotification 
+} from '../services/notificationService.js';
 
 const router = express.Router();
 
 // Get all courses
 router.get('/', async (req, res) => {
   try {
-    const courses = await Course.find().populate('instructor', 'username');
+    // Only return approved courses to general public
+    const courses = await Course.find({ 
+      approvalStatus: 'approved',
+      published: true 
+    }).populate('instructor', 'username');
+    
     res.json(courses);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -54,55 +66,235 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create course
-router.post('/', async (req, res) => {
+// Create course - protected route for instructors only
+router.post('/', authenticateToken, isInstructor, async (req, res) => {
   try {
-    const course = new Course(req.body);
-    await course.save();
-    res.status(201).json(course);
+    console.log('Creating new course with data:', req.body);
+    
+    // Validate required fields
+    const requiredFields = [
+      'title', 'instructor', 'location', 'description', 
+      'duration', 'level', 'price', 'category', 
+      'detailedDescription'
+    ];
+    
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        return res.status(400).json({ 
+          message: `Missing required field: ${field}`,
+          field
+        });
+      }
+    }
+    
+    // Verify that the instructor ID matches the authenticated user
+    if (req.user.id !== req.body.instructor) {
+      return res.status(403).json({ 
+        message: 'You can only create courses for yourself'
+      });
+    }
+    
+    // Set default values if missing
+    const courseData = {
+      ...req.body,
+      syllabus: req.body.syllabus || [],
+      requirements: req.body.requirements || [],
+      students: req.body.students || [],
+      rating: 0,
+      published: false,
+      approvalStatus: 'pending'
+    };
+    
+    // Create and save the course
+    const course = new Course(courseData);
+    
+    const savedCourse = await course.save();
+    console.log('Course created successfully:', savedCourse);
+    
+    // Get the instructor user to update their createdCourses array
+    const User = mongoose.model('User');
+    await User.findByIdAndUpdate(
+      req.body.instructor,
+      { $addToSet: { createdCourses: savedCourse._id } }
+    );
+    
+    // Return the created course with populated instructor
+    const populatedCourse = await Course.findById(savedCourse._id)
+      .populate('instructor', 'username email');
+      
+    res.status(201).json(populatedCourse);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating course:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      
+      for (let field in error.errors) {
+        validationErrors[field] = error.errors[field].message;
+      }
+      
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: validationErrors 
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: 'A course with this title already exists' 
+      });
+    }
+    
+    res.status(500).json({ message: 'Failed to create course', error: error.message });
   }
 });
 
-// Update course
-router.put('/:id', async (req, res) => {
+// Update course - protected route for instructors only
+router.put('/:id', authenticateToken, isInstructor, async (req, res) => {
   try {
-    const course = await Course.findByIdAndUpdate(
+    // First get the course to check ownership
+    const course = await Course.findById(req.params.id);
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    // Verify that the instructor is the owner of the course
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        message: 'You can only update your own courses' 
+      });
+    }
+    
+    // Find course and update
+    const updatedCourse = await Course.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
-    if (!course) {
+
+    if (!updatedCourse) {
       return res.status(404).json({ message: 'Course not found' });
     }
-    res.json(course);
+
+    res.json(updatedCourse);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating course:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: error.errors 
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: 'Duplicate key error', 
+        field: Object.keys(error.keyPattern)[0] 
+      });
+    }
+    
+    res.status(500).json({ message: error.message });
   }
 });
 
-// Delete course
-router.delete('/:id', async (req, res) => {
+// Partial update course - protected route for instructors only
+router.patch('/:id', authenticateToken, isInstructor, async (req, res) => {
   try {
-    const course = await Course.findByIdAndDelete(req.params.id);
+    // First get the course to check ownership
+    const course = await Course.findById(req.params.id);
+    
     if (!course) {
       return res.status(404).json({ message: 'Course not found' });
     }
-    res.json({ message: 'Course deleted' });
+    
+    // Verify that the instructor is the owner of the course
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        message: 'You can only update your own courses' 
+      });
+    }
+    
+    // Find course and update
+    const updatedCourse = await Course.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedCourse) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    res.json(updatedCourse);
   } catch (error) {
+    console.error('Error updating course:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation error', 
+        errors: error.errors 
+      });
+    }
+    
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete course - protected route for instructors only
+router.delete('/:id', authenticateToken, isInstructor, async (req, res) => {
+  try {
+    // First get the course to check ownership
+    const course = await Course.findById(req.params.id);
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    // Verify that the instructor is the owner of the course
+    if (course.instructor.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        message: 'You can only delete your own courses' 
+      });
+    }
+    
+    // Delete the course
+    await Course.findByIdAndDelete(req.params.id);
+    
+    // Remove course from instructor's createdCourses array
+    const User = mongoose.model('User');
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { $pull: { createdCourses: req.params.id } }
+    );
+    
+    res.json({ 
+      message: 'Course deleted successfully',
+      courseId: req.params.id
+    });
+  } catch (error) {
+    console.error('Error deleting course:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
 // Enroll in course
-router.post('/:id/enroll', async (req, res) => {
+router.post('/:id/enroll', authenticateToken, async (req, res) => {
   try {
     const courseId = req.params.id;
-    const { userId, paymentDetails } = req.body;
+    const userId = req.user.id; // Get user ID from token
+    const { paymentDetails } = req.body;
 
     // Check if course exists
-    const course = await Course.findById(courseId);
+    const course = await Course.findById(courseId)
+      .populate('instructor', 'username email');
+      
     if (!course) {
       return res.status(404).json({ message: 'Course not found' });
     }
@@ -143,6 +335,51 @@ router.post('/:id/enroll', async (req, res) => {
       await course.save();
     }
 
+    // Get user details for notification and email
+    const User = mongoose.model('User');
+    const user = await User.findById(userId);
+
+    // Create notifications
+    try {
+      // Course purchase notification
+      await createCoursePurchaseNotification(userId, course, {
+        amount: course.price,
+        currency: 'INR',
+        transactionId: paymentDetails.transactionId,
+        paymentMethod: paymentDetails.paymentMethod || 'card'
+      });
+
+      // Payment confirmation notification
+      await createPaymentConfirmationNotification(userId, {
+        amount: course.price,
+        currency: 'INR',
+        transactionId: paymentDetails.transactionId,
+        paymentMethod: paymentDetails.paymentMethod || 'card'
+      });
+
+      console.log('Course purchase notifications created for user:', userId);
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't block the enrollment if notifications fail
+    }
+
+    // Send email notification if user has enabled email notifications
+    try {
+      if (user.emailNotifications) {
+        await sendCourseEnrollmentEmail(
+          user.email,
+          user.username,
+          course
+        );
+        console.log('Course enrollment email sent to:', user.email);
+      } else {
+        console.log('Email notifications are disabled for user:', userId);
+      }
+    } catch (emailError) {
+      console.error('Error sending course enrollment email:', emailError);
+      // Don't block the enrollment if email fails
+    }
+
     // Return enrolled course with enrollment details
     const updatedCourse = await Course.findById(courseId)
       .populate('instructor', 'username')
@@ -151,7 +388,8 @@ router.post('/:id/enroll', async (req, res) => {
     // Return both course and enrollment details
     res.status(201).json({
       course: updatedCourse,
-      enrollment: enrollment
+      enrollment: enrollment,
+      message: 'Enrollment successful! You should receive a confirmation email shortly.'
     });
   } catch (error) {
     console.error('Enrollment error:', error);

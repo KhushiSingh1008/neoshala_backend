@@ -34,24 +34,26 @@ const AddedCoursesT = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      if (!user || !token) return;
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getCourses();
-        const instructorCourses = data.filter((course: Course) => course.instructor._id === user._id);
-        setCourses(instructorCourses);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch courses');
-        toast.error(err instanceof Error ? err.message : 'Failed to fetch courses');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCourses();
+    if (user && token) {
+      fetchCourses();
+    }
   }, [user, token]);
+
+  const fetchCourses = async () => {
+    if (!user || !token) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getCourses();
+      const instructorCourses = data.filter((course: Course) => course.instructor._id === user._id);
+      setCourses(instructorCourses);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch courses');
+      toast.error(err instanceof Error ? err.message : 'Failed to fetch courses');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -94,33 +96,76 @@ const AddedCoursesT = () => {
     setLoading(true);
     setError(null);
 
+    // Validate required fields
+    const requiredFields = [
+      'title', 'location', 'description', 'duration', 
+      'level', 'price', 'category', 'detailedDescription'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !formData[field as keyof CourseFormData]);
+    
+    if (missingFields.length > 0) {
+      setError(`Please fill in the following required fields: ${missingFields.join(', ')}`);
+      setLoading(false);
+      toast.error(`Missing required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    // Check if syllabus and requirements have at least one valid item
+    if (syllabusItems.filter(item => item.trim() !== '').length === 0) {
+      setError('Please add at least one syllabus item');
+      setLoading(false);
+      toast.error('Please add at least one syllabus item');
+      return;
+    }
+    
+    if (requirementItems.filter(item => item.trim() !== '').length === 0) {
+      setError('Please add at least one requirement');
+      setLoading(false);
+      toast.error('Please add at least one requirement');
+      return;
+    }
+
     try {
       let imageUrl = '';
       if (imageFile) {
         const formData = new FormData();
         formData.append('image', imageFile);
 
-        const uploadResponse = await fetch('http://localhost:5000/api/upload', {
+        console.log('Uploading image...');
+        const uploadResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload`, {
           method: 'POST',
           body: formData,
         });
 
         if (!uploadResponse.ok) {
-          throw new Error('Failed to upload image');
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.message || 'Failed to upload image');
         }
 
         const uploadData = await uploadResponse.json();
         imageUrl = uploadData.url;
+        console.log('Image uploaded successfully:', imageUrl);
+      } else {
+        setError('Please upload a course image');
+        setLoading(false);
+        toast.error('Course image is required');
+        return;
       }
 
+      // Prepare course data
       const courseData = {
         ...formData,
         imageUrl,
         syllabus: syllabusItems.filter(item => item.trim() !== ''),
         requirements: requirementItems.filter(item => item.trim() !== ''),
+        instructor: user?._id,
+        // Convert price to number
+        price: typeof formData.price === 'string' ? parseFloat(formData.price) : formData.price
       };
 
-      const response = await fetch('http://localhost:5000/api/courses', {
+      console.log('Creating course with data:', courseData);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/courses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -129,14 +174,107 @@ const AddedCoursesT = () => {
         body: JSON.stringify(courseData),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to create course');
+        if (responseData.errors) {
+          // Format validation errors for display
+          const errorMessages = Object.entries(responseData.errors)
+            .map(([field, message]) => `${field}: ${message}`)
+            .join(', ');
+          throw new Error(errorMessages || responseData.message || 'Failed to create course');
+        } else {
+          throw new Error(responseData.message || 'Failed to create course');
+        }
       }
 
-      const data = await response.json();
-      navigate(`/course/${data._id}`);
+      toast.success('Course created successfully!');
+      console.log('Course created:', responseData);
+      
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        location: '',
+        duration: '',
+        level: 'Beginner',
+        imageUrl: '',
+        price: 0,
+        category: '',
+        detailedDescription: '',
+        syllabus: [''],
+        requirements: [''],
+        instructor: user?._id || ''
+      });
+      setImageFile(null);
+      setSyllabusItems(['']);
+      setRequirementItems(['']);
+      setShowForm(false);
+      
+      // Refresh courses
+      fetchCourses();
+      
+      // Navigate to the course detail page
+      navigate(`/course/${responseData._id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Error creating course:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (courseId: string) => {
+    if (!token) {
+      toast.error('You must be logged in to delete a course');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/courses/${courseId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Update local state to remove the deleted course
+        setCourses(prevCourses => prevCourses.filter(course => course._id !== courseId));
+        toast.success('Course deleted successfully');
+        
+        // Update the user's createdCourses in context if needed
+        if (user && user.createdCourses) {
+          user.createdCourses = user.createdCourses.filter((id: string) => id !== courseId);
+        }
+      } else {
+        const errorData = await response.json();
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          toast.error('Authentication required. Please log in again.');
+          // Could redirect to login here
+        } else if (response.status === 403) {
+          toast.error('You do not have permission to delete this course.');
+        } else if (response.status === 404) {
+          toast.error('Course not found. It may have been already deleted.');
+          // Remove from local state since it doesn't exist anymore
+          setCourses(prevCourses => prevCourses.filter(course => course._id !== courseId));
+        } else {
+          throw new Error(errorData.message || 'Failed to delete course');
+        }
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(error instanceof Error ? error.message : 'An error occurred while deleting the course');
     } finally {
       setLoading(false);
     }
@@ -360,7 +498,13 @@ const AddedCoursesT = () => {
           <div key={course._id} className="course-card">
             <div className="course-image-container">
               <img
-                src={course.imageUrl?.startsWith('http') ? course.imageUrl : `http://localhost:5000${course.imageUrl}` || 'https://via.placeholder.com/300x160'}
+                src={
+                  course.imageUrl 
+                    ? (course.imageUrl.startsWith('http') 
+                      ? course.imageUrl 
+                      : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${course.imageUrl}`)
+                    : 'https://via.placeholder.com/300x160'
+                }
                 alt={course.title}
                 className="course-image"
                 onError={(e) => {
@@ -377,6 +521,23 @@ const AddedCoursesT = () => {
                 <span className="course-rating">
                   Rating: {course.rating || 0}/5
                 </span>
+              </div>
+              <div className="course-actions">
+                <button 
+                  className="view-btn"
+                  onClick={() => navigate(`/course/${course._id}`)}
+                >
+                  View
+                </button>
+                <button 
+                  className="delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(course._id);
+                  }}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </div>

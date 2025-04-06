@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthResponse } from '../types';
 import { login as loginApi, register as registerApi } from '../services/api';
 import { toast } from 'react-toastify';
+import { getNotificationsForUser } from '../services/notificationService';
 
 interface AuthContextType {
   user: User | null;
@@ -50,6 +51,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(response.user);
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // Explicitly wait for token to be set before fetching notifications
+      if (response.user?.role === 'instructor') {
+        console.log('Instructor logged in, fetching notifications...');
+        setTimeout(() => {
+          getNotificationsForUser(response.user._id);
+        }, 500); // Add a small delay to ensure token is set in storage
+      }
+      
       toast.success('Login successful!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

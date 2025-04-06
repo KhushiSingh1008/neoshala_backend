@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { FaBell } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaBell, FaTimesCircle, FaCheckCircle, FaMoneyBillWave } from 'react-icons/fa';
 import { useNotifications } from '../context/NotificationContext';
 import styled from 'styled-components';
 
 interface StyledProps {
   $isOpen?: boolean;
   isRead?: boolean;
+  $type?: string;
 }
 
 const NotificationContainer = styled.div`
@@ -50,6 +51,12 @@ const NotificationItem = styled.div<StyledProps>`
   padding: 12px 16px;
   border-bottom: 1px solid #e2e8f0;
   background-color: ${props => props.isRead ? 'white' : '#f7fafc'};
+  border-left: 3px solid ${props => {
+    if (props.$type === 'course_update') return '#e53e3e';
+    if (props.$type === 'course_purchase') return '#38a169';
+    if (props.$type === 'payment_confirmation') return '#3182ce';
+    return '#cbd5e0';
+  }};
   cursor: pointer;
 
   &:hover {
@@ -66,6 +73,8 @@ const NotificationTitle = styled.h4`
   font-size: 14px;
   font-weight: 600;
   color: #2d3748;
+  display: flex;
+  align-items: center;
 `;
 
 const NotificationBody = styled.p`
@@ -79,6 +88,12 @@ const NotificationTime = styled.span`
   color: #718096;
   display: block;
   margin-top: 4px;
+`;
+
+const TypeIcon = styled.span`
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
 `;
 
 const EmptyNotification = styled.div`
@@ -104,43 +119,84 @@ const ClearAllButton = styled.button`
 
 export const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, clearAll } = useNotifications();
+  const { notifications, unreadCount, markAsRead, clearAll, fetchNotifications } = useNotifications();
+
+  // Fetch notifications when the component mounts
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const formatTime = (date: Date) => {
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      Math.floor((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-      'day'
-    );
+    try {
+      const diffDays = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (isNaN(diffDays)) {
+        return 'Unknown date';
+      }
+      
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(-diffDays, 'day');
+    } catch (error) {
+      console.error('Error formatting date:', error, date);
+      return 'Invalid date';
+    }
+  };
+
+  const handleBellClick = () => {
+    // Refresh notifications when bell is clicked
+    fetchNotifications();
+    setIsOpen(!isOpen);
   };
 
   const handleNotificationClick = (notificationId: string) => {
     markAsRead(notificationId);
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'course_purchase':
+        return <FaCheckCircle color="#38a169" />;
+      case 'payment_confirmation':
+        return <FaMoneyBillWave color="#3182ce" />;
+      case 'course_update':
+        return <FaTimesCircle color="#e53e3e" />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <NotificationContainer>
-      <BellIcon onClick={() => setIsOpen(!isOpen)}>
+      <BellIcon onClick={handleBellClick}>
         <FaBell size={20} />
         {unreadCount > 0 && <NotificationBadge>{unreadCount}</NotificationBadge>}
       </BellIcon>
 
       <NotificationPanel $isOpen={isOpen}>
-        {notifications.length > 0 ? (
+        {notifications && notifications.length > 0 ? (
           <>
             {notifications.map(notification => (
               <NotificationItem
                 key={notification.id}
                 isRead={notification.read}
+                $type={notification.type}
                 onClick={() => handleNotificationClick(notification.id)}
               >
-                <NotificationTitle>{notification.title}</NotificationTitle>
+                <NotificationTitle>
+                  <TypeIcon>
+                    {getNotificationIcon(notification.type)}
+                  </TypeIcon>
+                  {notification.title}
+                </NotificationTitle>
                 <NotificationBody>{notification.body}</NotificationBody>
                 <NotificationTime>
                   {formatTime(notification.createdAt)}
                 </NotificationTime>
               </NotificationItem>
             ))}
-            <ClearAllButton onClick={clearAll}>
+            <ClearAllButton onClick={() => {
+              clearAll();
+              setIsOpen(false);
+            }}>
               Clear All
             </ClearAllButton>
           </>

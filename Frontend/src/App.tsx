@@ -14,6 +14,12 @@ import ProfilePage from './pages/ProfilePage';
 import AddedCoursesT from './pages/AddedCoursesT';
 import CourseDetailPage from './pages/CourseDetailPage';
 import CartPage from './pages/CartPage';
+import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminPendingCourses from './pages/AdminPendingCourses';
+import AdminCourses from './pages/AdminCourses';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -32,6 +38,9 @@ const App = () => {
                   <Route path="/explore" element={<ExplorePage />} />
                   <Route path="/course/:courseId" element={<CourseDetailPage />} />
                   <Route path="/AuthPage" element={<AuthPage />} />
+                  <Route path="/verify-email" element={<VerifyEmail />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
 
                   {/* Protected Routes - Student Access */}
                   <Route path="/cart" element={
@@ -59,6 +68,23 @@ const App = () => {
                   <Route path="/added-courses" element={
                     <ProtectedRoute requiredRole="instructor">
                       <AddedCoursesT />
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Protected Routes - Admin Access */}
+                  <Route path="/admin/dashboard" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/pending-courses" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminPendingCourses />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/courses" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminCourses />
                     </ProtectedRoute>
                   } />
 

@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import userRoutes from './routes/userRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import fs from 'fs';
 
 dotenv.config();
@@ -21,7 +23,7 @@ const __dirname = path.dirname(__filename);
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -38,6 +40,11 @@ if (!fs.existsSync(profilePicturesDir)) {
   fs.mkdirSync(profilePicturesDir, { recursive: true });
 }
 
+const courseImagesDir = path.join(uploadsDir, 'course-images');
+if (!fs.existsSync(courseImagesDir)) {
+  fs.mkdirSync(courseImagesDir, { recursive: true });
+}
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -45,6 +52,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // MongoDB Connection
 const PORT = process.env.PORT || 5000;

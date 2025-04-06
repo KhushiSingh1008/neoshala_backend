@@ -1,5 +1,6 @@
 // AboutUs.tsx
 import './AboutUs.css';
+import { Link } from 'react-router-dom';
 
 const AboutUs = () => {
   return (
@@ -29,9 +30,9 @@ const AboutUs = () => {
               <span>Leadership Development</span>
             </div>
           </div>
-          <a href="#learn-more" className="hero-cta">
+          <Link to="/explore" className="hero-cta">
             Discover More
-          </a>
+          </Link>
         </div>
       </div>
     </section>

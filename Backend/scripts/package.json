@@ -1,0 +1,13 @@
+{
+  "name": "neoshala-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for the Neoshala application",
+  "type": "module",
+  "scripts": {
+    "create-admin": "node createAdminUser.js",
+    "update-courses": "node updateExistingCourses.js"
+  },
+  "dependencies": {
+    "neoshala-scripts": "file:"
+  }
+}
