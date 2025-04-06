@@ -113,7 +113,12 @@ router.post('/:id/enroll', async (req, res) => {
       return res.status(400).json({ message: 'Already enrolled in this course' });
     }
 
-    // Create new enrollment record
+    // Validate payment details
+    if (!paymentDetails || !paymentDetails.transactionId) {
+      return res.status(400).json({ message: 'Invalid payment details' });
+    }
+
+    // Create new enrollment record with payment details
     const enrollment = new CourseEnrollment({
       courseId,
       userId,
@@ -121,13 +126,18 @@ router.post('/:id/enroll', async (req, res) => {
       paymentId: paymentDetails.paymentId,
       amountPaid: course.price,
       transactionId: paymentDetails.transactionId,
-      paymentMethod: paymentDetails.paymentMethod
+      paymentMethod: paymentDetails.paymentMethod,
+      cardNumber: paymentDetails.cardNumber,
+      cardholderName: paymentDetails.cardholderName,
+      enrollmentDate: new Date(),
+      status: 'active',
+      progress: 0
     });
 
     // Save enrollment
     await enrollment.save();
 
-    // Add student to course
+    // Add student to course if not already added
     if (!course.students.includes(userId)) {
       course.students.push(userId);
       await course.save();
@@ -138,6 +148,7 @@ router.post('/:id/enroll', async (req, res) => {
       .populate('instructor', 'username')
       .populate('students', 'username');
 
+    // Return both course and enrollment details
     res.status(201).json({
       course: updatedCourse,
       enrollment: enrollment

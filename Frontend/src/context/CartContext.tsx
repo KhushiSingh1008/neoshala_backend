@@ -12,36 +12,38 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const CART_STORAGE_KEY = 'neoshala_cart';
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cartItems, setCartItems] = useState<Course[]>([]);
-  const [cartCount, setCartCount] = useState(0);
+  const [cartItems, setCartItems] = useState<Course[]>(() => {
+    // Initialize cart from localStorage
+    const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
 
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
-    }
-  }, []);
+  const [cartCount, setCartCount] = useState(cartItems.length);
 
-  // Update localStorage and cart count whenever cart changes
+  // Update localStorage whenever cart changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
     setCartCount(cartItems.length);
   }, [cartItems]);
 
   const addToCart = (course: Course) => {
     if (!isInCart(course._id)) {
-      setCartItems(prev => [...prev, course]);
+      const updatedCart = [...cartItems, course];
+      setCartItems(updatedCart);
     }
   };
 
   const removeFromCart = (courseId: string) => {
-    setCartItems(prev => prev.filter(item => item._id !== courseId));
+    const updatedCart = cartItems.filter(item => item._id !== courseId);
+    setCartItems(updatedCart);
   };
 
   const clearCart = () => {
     setCartItems([]);
+    localStorage.removeItem(CART_STORAGE_KEY);
   };
 
   const isInCart = (courseId: string) => {

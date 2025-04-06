@@ -1,4 +1,5 @@
 export interface User {
+  id: string;
   _id: string;
   username: string;
   email: string;
@@ -7,15 +8,15 @@ export interface User {
   age?: number;
   bio?: string;
   profilePicture?: string;
+  emailNotifications?: boolean;
+  createdAt?: Date;
 }
 
 export interface Course {
+  id: string;
   _id: string;
   title: string;
-  instructor: {
-    _id: string;
-    username: string;
-  };
+  instructor: User;
   location: string;
   description: string;
   duration: string;
@@ -33,8 +34,10 @@ export interface Course {
   }[];
   reviews?: Review[];
   userRating?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  published: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  thumbnail?: string;
 }
 
 export interface Review {
@@ -90,5 +93,6 @@ export interface ProfileUpdateData {
 }
 
 export interface ProfilePictureResponse {
-  profilePicture: string;
+  user: User;
+  message?: string;
 } 

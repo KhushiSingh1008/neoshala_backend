@@ -12,38 +12,38 @@ interface Review {
 const sampleReviews: Review[] = [
   {
     id: 1,
-    imageUrl: 'https://randomuser.me/api/portraits/women/44.jpg',
-    text: 'Excellent service! The team went above and beyond to meet our needs. Highly recommended for anyone looking for quality work.',
-    author: 'Sarah Johnson',
-    role: 'Marketing Director'
+    imageUrl: './assets/Rakshit.png',
+    text: 'I’ve been using Neoshala for a few months now, and it has completely transformed my routine. The quality is outstanding, and the results speak for themselves. Highly recommend!',
+    author: 'Rakshit Sharma',
+    role: 'Web Developer'
   },
   {
     id: 2,
-    imageUrl: 'https://randomuser.me/api/portraits/men/32.jpg',
-    text: 'Working with this company was a game-changer for our business. Their attention to detail and creative solutions are unmatched.',
-    author: 'Michael Chen',
-    role: 'CEO, TechStart'
+    imageUrl: './assets/Anshi.png',
+    text: 'Finding the right learning platform used to be a nightmare. With Neoshala, I discovered so many amazing non-coaching options I didn’t even know existed!',
+    author: 'Anshi Tiwari',
+    role: 'Third Year Student'
   },
   {
     id: 3,
-    imageUrl: 'https://randomuser.me/api/portraits/women/68.jpg',
-    text: 'The results exceeded our expectations. Professional, efficient, and delivered on time. Will definitely work with them again.',
-    author: 'Emily Rodriguez',
-    role: 'Product Manager'
+    imageUrl: './assets/pratham.png',
+    text: 'I love that Neoshala is unbiased It is not pushing any one coaching center—just showing genuine options for learners.',
+    author: 'Pratham',
+    role: 'Third Year Student'
   },
   {
     id: 4,
     imageUrl: 'https://randomuser.me/api/portraits/men/75.jpg',
-    text: 'Outstanding communication throughout the project. They understood our vision perfectly and brought it to life beautifully.',
+    text: 'I can find the students online easily and spread my knowledge easily to thoses who need it.',
     author: 'David Wilson',
-    role: 'Creative Director'
+    role: 'Yoga Trainer'
   },
   {
     id: 5,
     imageUrl: 'https://randomuser.me/api/portraits/women/23.jpg',
     text: 'A pleasure to work with from start to finish. Their expertise saved us time and money while delivering top-notch results.',
     author: 'Jessica Lee',
-    role: 'Founder & CEO'
+    role: 'Pottery Trainer'
   }
 ];
 

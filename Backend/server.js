@@ -17,14 +17,25 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middleware
-app.use(cors());
+// Configure CORS
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, 'uploads', 'course-images');
+const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const profilePicturesDir = path.join(uploadsDir, 'profile-pictures');
+if (!fs.existsSync(profilePicturesDir)) {
+  fs.mkdirSync(profilePicturesDir, { recursive: true });
 }
 
 // Serve static files from uploads directory

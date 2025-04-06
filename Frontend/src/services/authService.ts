@@ -11,6 +11,7 @@ import {
 import { auth } from '../firebase/firebaseConfig';
 import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
+import { toast } from 'react-toastify';
 
 interface UserProfile {
   email: string;
@@ -20,6 +21,8 @@ interface UserProfile {
   bio?: string;
   photoURL?: string;
   createdAt?: Date;
+  emailVerified?: boolean;
+  emailNotifications?: boolean;
 }
 
 export const signUp = async (
@@ -36,7 +39,11 @@ export const signUp = async (
       displayName: `${firstName} ${lastName}`
     });
 
-    await sendEmailVerification(userCredential.user);
+    // Send verification email
+    await sendEmailVerification(userCredential.user, {
+      url: window.location.origin + '/login',
+      handleCodeInApp: true
+    });
 
     const userData: UserProfile = {
       email,
@@ -44,11 +51,19 @@ export const signUp = async (
       firstName,
       lastName,
       bio: '',
-      createdAt: new Date()
+      createdAt: new Date(),
+      emailVerified: false,
+      emailNotifications: true // Enable email notifications by default
     };
 
     await setDoc(doc(db, 'users', userCredential.user.uid), userData);
     
+    // Show success message
+    toast.success(
+      'Registration successful! Please check your email to verify your account.',
+      { autoClose: 5000 }
+    );
+
     return userCredential;
   } catch (error: any) {
     let errorMessage = 'Signup failed';
@@ -160,7 +175,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 
 export const sendVerificationEmail = async (user: User): Promise<void> => {
   try {
-    await sendEmailVerification(user);
+    await sendEmailVerification(user, {
+      url: window.location.origin + '/login',
+      handleCodeInApp: true
+    });
+    toast.success('Verification email sent! Please check your inbox.');
   } catch (error) {
     console.error('Error sending verification email:', error);
     throw new Error('Failed to send verification email');
@@ -176,5 +195,22 @@ export const resetPassword = async (email: string): Promise<void> => {
       errorMessage = 'User not found';
     }
     throw new Error(errorMessage);
+  }
+};
+
+export const updateEmailPreferences = async (userId: string, enableNotifications: boolean): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, {
+      emailNotifications: enableNotifications
+    });
+    toast.success(
+      enableNotifications 
+        ? 'Email notifications enabled' 
+        : 'Email notifications disabled'
+    );
+  } catch (error) {
+    console.error('Error updating email preferences:', error);
+    throw new Error('Failed to update email preferences');
   }
 };

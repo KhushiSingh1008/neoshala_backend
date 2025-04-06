@@ -220,6 +220,8 @@ router.post('/profile/picture', upload.single('profilePicture'), async (req, res
     await user.save();
     console.log('User updated with new profile picture');
 
+    // Send response with full URL
+    const fullProfilePictureUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}${profilePicturePath}`;
     res.json({
       user: {
         _id: user._id,
@@ -229,7 +231,7 @@ router.post('/profile/picture', upload.single('profilePicture'), async (req, res
         location: user.location,
         age: user.age,
         bio: user.bio,
-        profilePicture: user.profilePicture
+        profilePicture: fullProfilePictureUrl
       }
     });
   } catch (error) {

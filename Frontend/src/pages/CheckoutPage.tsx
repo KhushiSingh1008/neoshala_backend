@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { enrollInCourse } from '../services/api';
+import { sendCoursePurchaseNotification } from '../services/notificationService';
 import { toast } from 'react-toastify';
+import { Course } from '../types';
 import './CheckoutPage.css';
 
 const CheckoutPage = () => {
@@ -26,26 +28,82 @@ const CheckoutPage = () => {
     setLoading(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      // Get form data
+      const form = e.target as HTMLFormElement;
+      const cardNumber = (form.querySelector('input[placeholder="1234 5678 9012 3456"]') as HTMLInputElement).value;
+      const expiryDate = (form.querySelector('input[placeholder="MM/YY"]') as HTMLInputElement).value;
+      const cvv = (form.querySelector('input[placeholder="123"]') as HTMLInputElement).value;
+      const cardholderName = (form.querySelector('input[placeholder="John Doe"]') as HTMLInputElement).value;
+
+      // Basic card validation
+      if (!cardNumber.replace(/\s/g, '').match(/^[0-9]{16}$/)) {
+        throw new Error('Invalid card number');
+      }
+      if (!expiryDate.match(/^(0[1-9]|1[0-2])\/([0-9]{2})$/)) {
+        throw new Error('Invalid expiry date');
+      }
+      if (!cvv.match(/^[0-9]{3,4}$/)) {
+        throw new Error('Invalid CVV');
+      }
+      if (!cardholderName.trim()) {
+        throw new Error('Invalid cardholder name');
+      }
+
       // Generate a mock transaction ID
       const transactionId = 'TXN' + Math.random().toString(36).substr(2, 9).toUpperCase();
       const currentDate = new Date().toLocaleString();
       
-      // Enroll student in all courses
-      const enrollmentPromises = cartItems.map(course => 
-        enrollInCourse(course._id, user!._id, token!)
-      );
+      // Create payment details object
+      const paymentDetails = {
+        transactionId,
+        cardNumber: cardNumber.slice(-4), // Only store last 4 digits
+        cardholderName,
+        amount: total,
+        date: currentDate
+      };
       
-      await Promise.all(enrollmentPromises);
+      // Process enrollments one by one to handle errors better
+      const enrollmentResults: { course: Course; enrollment: any }[] = [];
       
-      // Set payment details
+      // First, try to enroll in all courses
+      for (const course of cartItems) {
+        try {
+          const response = await enrollInCourse(course._id, user!._id, token!, paymentDetails);
+          enrollmentResults.push(response);
+        } catch (error: any) {
+          // If enrollment fails for any course, throw error with details
+          throw new Error(`Failed to enroll in ${course.title}: ${error.message}`);
+        }
+      }
+      
+      // If all enrollments are successful, send notifications
+      for (const course of cartItems) {
+        try {
+          await sendCoursePurchaseNotification(
+            user!._id,
+            course.title,
+            {
+              amount: course.price,
+              currency: 'INR',
+              transactionId
+            }
+          );
+        } catch (error) {
+          console.error('Error sending notification:', error);
+          // Don't throw error here, as enrollment was successful
+        }
+      }
+      
+      // If we get here, all enrollments were successful
+      // Set payment details for receipt
       setPaymentDetails({
         transactionId,
         amount: total,
         date: currentDate,
-        courses: [...cartItems]
+        courses: cartItems.map((course, index) => ({
+          ...course,
+          enrollmentId: enrollmentResults[index].enrollment._id
+        }))
       });
       
       // Show success state
@@ -53,9 +111,20 @@ const CheckoutPage = () => {
       
       // Clear cart after successful payment
       clearCart();
-    } catch (error) {
+      
+      toast.success('Payment successful! You are now enrolled in the course(s).');
+    } catch (error: any) {
       console.error('Payment or enrollment failed:', error);
-      toast.error('Payment failed. Please try again.');
+      
+      // Show specific error message
+      if (error.message.includes('Already enrolled')) {
+        toast.error('You are already enrolled in one or more of these courses. Please remove them from your cart.');
+      } else {
+        toast.error(error.message || 'Payment failed. Please try again.');
+      }
+      
+      // Ensure payment success is false in case of error
+      setPaymentSuccess(false);
     } finally {
       setLoading(false);
     }

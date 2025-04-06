@@ -21,9 +21,13 @@
   background-color: #4f46e5;
   color: white;
   padding: 0.75rem 1.5rem;
+  border: none;
   border-radius: 8px;
   font-weight: 600;
   transition: all 0.3s ease;
+  cursor: pointer;
+  width: auto;
+  min-width: 120px;
 }
 
 .add-course-btn:hover {
@@ -80,8 +84,7 @@
 }
 
 .submit-btn {
-  width: 100%;
-  padding: 1rem;
+  padding: 0.75rem 1.5rem;
   background-color: #4f46e5;
   color: white;
   border: none;
@@ -89,6 +92,8 @@
   font-weight: 600;
   transition: all 0.3s ease;
   cursor: pointer;
+  width: auto;
+  min-width: 120px;
 }
 
 .submit-btn:hover {
@@ -217,14 +222,53 @@
   background-color: #4CAF50;
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
   margin-top: 8px;
+  width: fit-content;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
 
 .add-item-btn:hover {
   background-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(76, 175, 80, 0.3);
+}
+
+.add-item-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+}
+
+.create-course-btn {
+  background-color: #1E90FF;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  width: fit-content;
+  margin: 24px auto;
+  display: block;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 2px 4px rgba(30, 144, 255, 0.2);
+}
+
+.create-course-btn:hover {
+  background-color: #187bcd;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(30, 144, 255, 0.3);
+}
+
+.create-course-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(30, 144, 255, 0.2);
 }
 
 input[type="file"] {
@@ -252,4 +296,4 @@ input[type="file"] {
   .courses-grid {
     grid-template-columns: 1fr;
   }
-} 
+}

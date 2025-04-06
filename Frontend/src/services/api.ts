@@ -57,16 +57,32 @@ export const createCourse = async (courseData: CourseFormData, token: string): P
   return handleResponse<Course>(response);
 };
 
-export const enrollInCourse = async (courseId: string, userId: string, token: string): Promise<Course> => {
+export const enrollInCourse = async (courseId: string, userId: string, token: string, paymentDetails: {
+  transactionId: string;
+  cardNumber: string;
+  cardholderName: string;
+  amount: number;
+  date: string;
+}): Promise<{ course: Course; enrollment: any }> => {
   const response = await fetch(`${API_URL}/api/courses/${courseId}/enroll`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify({ 
+      userId,
+      paymentDetails: {
+        paymentId: paymentDetails.transactionId,
+        paymentMethod: 'card',
+        transactionId: paymentDetails.transactionId,
+        cardNumber: paymentDetails.cardNumber,
+        cardholderName: paymentDetails.cardholderName,
+        amount: paymentDetails.amount
+      }
+    }),
   });
-  return handleResponse<Course>(response);
+  return handleResponse<{ course: Course; enrollment: any }>(response);
 };
 
 // User API calls
@@ -98,9 +114,17 @@ export const uploadProfilePicture = async (token: string, file: File): Promise<P
   const response = await fetch(`${API_URL}/api/users/profile/picture`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${token}`
     },
     body: formData,
+    credentials: 'include'
   });
-  return handleResponse<ProfilePictureResponse>(response);
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to upload profile picture');
+  }
+  
+  const data = await response.json();
+  return data;
 }; 
