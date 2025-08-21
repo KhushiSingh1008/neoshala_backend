@@ -8,9 +8,8 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { auth } from '../firebase/firebaseConfig';
+import { auth, db, isFirebaseConfigured } from '../firebase/firebaseConfig';
 import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/firebaseConfig';
 import { toast } from 'react-toastify';
 
 interface UserProfile {
@@ -25,6 +24,14 @@ interface UserProfile {
   emailNotifications?: boolean;
 }
 
+const ensureFirebaseAuth = () => {
+  if (!isFirebaseConfigured || !auth || !db) {
+    const msg = 'Authentication is not configured. Please set VITE_FIREBASE_* in Frontend/.env';
+    toast.error(msg);
+    throw new Error(msg);
+  }
+};
+
 export const signUp = async (
   email: string,
   password: string,
@@ -33,6 +40,8 @@ export const signUp = async (
   lastName: string
 ): Promise<UserCredential> => {
   try {
+    ensureFirebaseAuth();
+
     // Validate inputs
     if (!email || !password || !firstName) {
       throw new Error('Please fill in all required fields');
@@ -42,7 +51,7 @@ export const signUp = async (
       throw new Error('Password must be at least 6 characters long');
     }
 
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(auth!, email, password);
     
     await updateFirebaseProfile(userCredential.user, {
       displayName: `${firstName} ${lastName}`
@@ -70,7 +79,7 @@ export const signUp = async (
       emailNotifications: true
     };
 
-    await setDoc(doc(db, 'users', userCredential.user.uid), userData);
+    await setDoc(doc(db!, 'users', userCredential.user.uid), userData);
     
     toast.success('Registration successful! You can now access all features.');
 
@@ -106,12 +115,14 @@ export const signUp = async (
 
 export const login = async (email: string, password: string): Promise<UserCredential> => {
   try {
+    ensureFirebaseAuth();
+
     // Validate inputs
     if (!email || !password) {
       throw new Error('Please enter both email and password');
     }
 
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth!, email, password);
     
     // No email verification required - user can access everything after login
     return userCredential;
@@ -148,7 +159,8 @@ export const login = async (email: string, password: string): Promise<UserCreden
 
 export const logout = async (): Promise<void> => {
   try {
-    await signOut(auth);
+    ensureFirebaseAuth();
+    await signOut(auth!);
   } catch (error) {
     console.error('Logout error:', error);
     throw new Error('Failed to logout');
@@ -160,7 +172,9 @@ export const updateProfile = async (
   profileData: { displayName?: string; bio?: string }
 ): Promise<void> => {
   try {
-    const user = auth.currentUser;
+    ensureFirebaseAuth();
+
+    const user = auth!.currentUser;
     if (!user) {
       throw new Error('No user logged in');
     }
@@ -173,7 +187,7 @@ export const updateProfile = async (
     }
 
     // Update Firestore document
-    const userRef = doc(db, 'users', user.uid);
+    const userRef = doc(db!, 'users', user.uid);
     const updateData: Partial<UserProfile> = {};
     
     if (profileData.bio) {
@@ -194,7 +208,9 @@ export const updateProfile = async (
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   try {
-    const userRef = doc(db, 'users', userId);
+    ensureFirebaseAuth();
+
+    const userRef = doc(db!, 'users', userId);
     const docSnap = await getDoc(userRef);
     
     if (docSnap.exists()) {
@@ -209,7 +225,9 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 
 export const sendVerificationEmail = async (user?: User): Promise<void> => {
   try {
-    const currentUser = user || auth.currentUser;
+    ensureFirebaseAuth();
+
+    const currentUser = user || auth!.currentUser;
     if (!currentUser) {
       throw new Error('No user is currently logged in');
     }
@@ -236,7 +254,9 @@ export const sendVerificationEmail = async (user?: User): Promise<void> => {
 // Function to resend verification email for current user
 export const resendVerificationEmail = async (): Promise<void> => {
   try {
-    const user = auth.currentUser;
+    ensureFirebaseAuth();
+
+    const user = auth!.currentUser;
     if (!user) {
       throw new Error('No user is currently logged in');
     }
@@ -255,7 +275,9 @@ export const resendVerificationEmail = async (): Promise<void> => {
 
 export const resetPassword = async (email: string): Promise<void> => {
   try {
-    await sendPasswordResetEmail(auth, email, {
+    ensureFirebaseAuth();
+
+    await sendPasswordResetEmail(auth!, email, {
       url: window.location.origin + '/AuthPage',
       handleCodeInApp: false
     });
@@ -282,7 +304,9 @@ export const resetPassword = async (email: string): Promise<void> => {
 
 export const updateEmailPreferences = async (userId: string, enableNotifications: boolean): Promise<void> => {
   try {
-    const userRef = doc(db, 'users', userId);
+    ensureFirebaseAuth();
+
+    const userRef = doc(db!, 'users', userId);
     await updateDoc(userRef, {
       emailNotifications: enableNotifications
     });

@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/firebaseConfig';
+import { auth, db, isFirebaseConfigured } from '../firebase/firebaseConfig';
 import { 
   signUp, 
   login as firebaseLogin, 
   logout as firebaseLogout 
 } from '../services/authService';
+import { login as backendLogin, register as backendRegister } from '../services/api';
 import { toast } from 'react-toastify';
 import { User } from '../types';
 
@@ -39,6 +40,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
+    // If Firebase isn't configured, skip initializing auth to prevent runtime errors
+    if (!isFirebaseConfigured || !auth) {
+      console.warn('Firebase is not configured. Skipping auth initialization.');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (!isMounted) return;
 
@@ -56,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Try to get user data from Firestore with timeout
           try {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userDocRef = doc(db!, 'users', firebaseUser.uid);
             const userDoc = await Promise.race([
               getDoc(userDocRef),
               new Promise((_, reject) => 
@@ -149,6 +157,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       setError(null);
+
+      if (!isFirebaseConfigured || !auth) {
+        // Backend fallback authentication
+        const resp = await backendLogin({ email, password });
+        const apiUser = resp.user as any;
+        const unifiedUser: User = {
+          id: (apiUser.id || apiUser._id)?.toString(),
+          _id: (apiUser._id || apiUser.id)?.toString(),
+          username: apiUser.username,
+          email: apiUser.email,
+          role: apiUser.role,
+          location: apiUser.location,
+          age: apiUser.age,
+          bio: apiUser.bio,
+          profilePicture: apiUser.profilePicture,
+          emailNotifications: apiUser.emailNotifications,
+          isVerified: apiUser.isVerified,
+          createdAt: apiUser.createdAt ? new Date(apiUser.createdAt) : undefined,
+        };
+        setUser(unifiedUser);
+        setFirebaseUser(null);
+        setToken(resp.token);
+        localStorage.setItem('token', resp.token);
+        toast.success(resp.message || 'Login successful!');
+        return;
+      }
+
       await firebaseLogin(email, password);
       toast.success('Login successful!');
     } catch (err) {
@@ -170,6 +205,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       setError(null);
+
+      if (!isFirebaseConfigured || !auth) {
+        const resp = await backendRegister(userData as any);
+        const apiUser = resp.user as any;
+        const unifiedUser: User = {
+          id: (apiUser.id || apiUser._id)?.toString(),
+          _id: (apiUser._id || apiUser.id)?.toString(),
+          username: apiUser.username,
+          email: apiUser.email,
+          role: apiUser.role,
+          location: apiUser.location,
+          age: apiUser.age,
+          bio: apiUser.bio,
+          profilePicture: apiUser.profilePicture,
+          emailNotifications: apiUser.emailNotifications,
+          isVerified: apiUser.isVerified,
+          createdAt: apiUser.createdAt ? new Date(apiUser.createdAt) : undefined,
+        };
+        setUser(unifiedUser);
+        setFirebaseUser(null);
+        setToken(resp.token);
+        localStorage.setItem('token', resp.token);
+        toast.success(resp.message || 'Registration successful!');
+        return;
+      }
       
       const [firstName, lastName] = userData.username.split(' ');
       await signUp(
@@ -194,9 +254,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setLoading(true);
-      await firebaseLogout();
+      if (isFirebaseConfigured && auth) {
+        await firebaseLogout();
+      }
       setToken(null);
       setUser(null);
+      setFirebaseUser(null);
+      localStorage.removeItem('token');
       toast.success('Logged out successfully!');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Logout failed';

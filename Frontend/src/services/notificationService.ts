@@ -1,18 +1,39 @@
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
-import { db, app } from '../firebase/firebaseConfig';
+import { db, app, isFirebaseConfigured } from '../firebase/firebaseConfig';
 import { toast } from 'react-toastify';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const messaging = getMessaging(app);
+// Initialize messaging safely only if Firebase is configured and running in a browser
+let messaging: ReturnType<typeof getMessaging> | null = null;
+try {
+  if (isFirebaseConfigured && app && typeof window !== 'undefined' && 'Notification' in window) {
+    messaging = getMessaging(app);
+  } else {
+    console.warn('Firebase messaging is not initialized (missing config or unsupported environment).');
+  }
+} catch (e) {
+  console.error('Failed to initialize Firebase messaging:', e);
+  messaging = null;
+}
 
 // Request permission and get FCM token
 export const requestNotificationPermission = async (userId: string) => {
   try {
+    if (!isFirebaseConfigured || !app || !db) {
+      console.warn('Notifications are not configured. Skipping permission request.');
+      throw new Error('Notifications are not configured');
+    }
+
     // First check if the browser supports notifications
-    if (!('Notification' in window)) {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
       throw new Error('This browser does not support notifications');
+    }
+
+    if (!messaging) {
+      console.warn('Firebase messaging is unavailable');
+      throw new Error('Notifications are unavailable');
     }
 
     // Request permission
@@ -52,8 +73,12 @@ export const requestNotificationPermission = async (userId: string) => {
 
 // Handle foreground messages
 export const onMessageListener = () => {
+  if (!messaging) {
+    // Return a resolved promise with null when messaging isn't available
+    return Promise.resolve(null as any);
+  }
   return new Promise((resolve) => {
-    onMessage(messaging, (payload) => {
+    onMessage(messaging!, (payload) => {
       resolve(payload);
     });
   });
@@ -67,6 +92,8 @@ export const saveNotification = async (userId: string, notification: {
   data?: any;
 }) => {
   try {
+    if (!isFirebaseConfigured || !db) return null;
+
     const notificationRef = await addDoc(collection(db, 'users', userId, 'notifications'), {
       ...notification,
       read: false,

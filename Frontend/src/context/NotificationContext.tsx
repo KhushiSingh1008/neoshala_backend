@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { requestNotificationPermission, onMessageListener, getNotificationsForUser } from '../services/notificationService';
 import { toast } from 'react-toastify';
@@ -37,7 +37,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { user } = useAuth();
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user?._id) return;
     
     try {
@@ -61,7 +61,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  };
+  }, [user?._id]);
 
   useEffect(() => {
     if (user) {
@@ -107,11 +107,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // No cleanup needed for the promise-based listener
       };
     }
-  }, [user]);
+  }, [user, fetchNotifications]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
-  const markAsRead = async (notificationId: string) => {
+  const markAsRead = useCallback(async (notificationId: string) => {
     try {
       const token = localStorage.getItem('token');
       
@@ -144,9 +144,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  };
+  }, []);
 
-  const clearAll = async () => {
+  const clearAll = useCallback(async () => {
     try {
       if (!user?._id) return;
       
@@ -177,18 +177,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.error('Error clearing notifications:', error);
       toast.error('Failed to clear notifications');
     }
-  };
+  }, [user?._id]);
+
+  const value = useMemo(() => ({
+    notifications,
+    unreadCount,
+    markAsRead,
+    clearAll,
+    fetchNotifications
+  }), [notifications, unreadCount, markAsRead, clearAll, fetchNotifications]);
 
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        markAsRead,
-        clearAll,
-        fetchNotifications
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

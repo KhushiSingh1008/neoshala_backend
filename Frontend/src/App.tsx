@@ -24,6 +24,8 @@ import AdminPendingCourses from './pages/AdminPendingCourses';
 import AdminCourses from './pages/AdminCourses';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   useEffect(() => {
@@ -109,6 +111,7 @@ const App = () => {
                 </Routes>
               </main>
               </div>
+              <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop />
             </NotificationProvider>
           </CartProvider>
         </AuthProvider>
