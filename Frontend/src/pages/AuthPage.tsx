@@ -241,10 +241,12 @@ const AuthPage: React.FC = () => {
     try {
       if (isLogin) {
         await login(formData.email, formData.password);
+        navigate('/profile');
       } else {
         await register(formData);
+        // Don't navigate immediately after registration since email verification is required
+        // The user will be redirected after email verification
       }
-      navigate('/profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
     }

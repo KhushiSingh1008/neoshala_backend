@@ -9,10 +9,11 @@ import './Navbar.css';
 import styled from 'styled-components';
 
 const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
   const { cartCount } = useCart();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleAboutClick = () => {
     setIsMenuOpen(false);
@@ -32,9 +33,17 @@ const Navbar: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsMenuOpen(false);
-    logout();
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -85,8 +94,12 @@ const Navbar: React.FC = () => {
             <Link to="/profile" className="nav-link profile-link" onClick={() => setIsMenuOpen(false)}>
               Profile
             </Link>
-            <button onClick={handleLogout} className="logout-button">
-              Logout
+            <button 
+              onClick={handleLogout} 
+              className="logout-button"
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
             </button>
           </>
         ) : (

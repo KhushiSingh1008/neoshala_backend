@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getStudentCourses, rateCourse, getUserRating } from '../services/courseService';
 import { Course } from '../types';
 import { FaStar, FaMapMarkerAlt, FaClock, FaHeart } from 'react-icons/fa';
 import { MdCategory } from 'react-icons/md';
@@ -114,29 +115,20 @@ const MyCoursesU = () => {
     if (!user?._id || !token) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/courses/student/${user._id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch courses');
-      }
-
-      const data = await response.json();
+      const data = await getStudentCourses(user._id, token);
       
       // Fetch user ratings for each course
       const coursesWithRatings = await Promise.all(
         data.map(async (course: Course) => {
-          const userRating = await fetchUserRating(course._id);
-          return { ...course, userRating };
+          const ratingData = await getUserRating(course._id, user._id);
+          return { ...course, userRating: ratingData.rating };
         })
       );
 
       setCourses(coursesWithRatings);
     } catch (error) {
       console.error('Error fetching courses:', error);
+      toast.error('Failed to fetch your courses');
     } finally {
       setLoading(false);
     }

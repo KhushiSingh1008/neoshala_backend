@@ -33,17 +33,31 @@ export const signUp = async (
   lastName: string
 ): Promise<UserCredential> => {
   try {
+    // Validate inputs
+    if (!email || !password || !firstName) {
+      throw new Error('Please fill in all required fields');
+    }
+
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
     await updateFirebaseProfile(userCredential.user, {
       displayName: `${firstName} ${lastName}`
     });
 
-    // Send verification email
-    await sendEmailVerification(userCredential.user, {
-      url: window.location.origin + '/login',
-      handleCodeInApp: true
-    });
+    // Try to send verification email, but don't fail if it doesn't work
+    try {
+      await sendEmailVerification(userCredential.user, {
+        url: window.location.origin + '/AuthPage',
+        handleCodeInApp: false
+      });
+    } catch (emailError) {
+      console.warn('Failed to send verification email:', emailError);
+      toast.warning('Account created but verification email could not be sent. You can still login.');
+    }
 
     const userData: UserProfile = {
       email,
@@ -53,30 +67,38 @@ export const signUp = async (
       bio: '',
       createdAt: new Date(),
       emailVerified: false,
-      emailNotifications: true // Enable email notifications by default
+      emailNotifications: true
     };
 
     await setDoc(doc(db, 'users', userCredential.user.uid), userData);
     
-    // Show success message
-    toast.success(
-      'Registration successful! Please check your email to verify your account.',
-      { autoClose: 5000 }
-    );
+    toast.success('Registration successful! You can now access all features.');
 
     return userCredential;
   } catch (error: any) {
     let errorMessage = 'Signup failed';
     switch (error.code) {
       case 'auth/email-already-in-use':
-        errorMessage = 'Email already in use';
+        errorMessage = 'An account with this email already exists.';
+        toast.info('This email is already registered. Try logging in instead, or use a different email address.');
         break;
       case 'auth/invalid-email':
-        errorMessage = 'Invalid email address';
+        errorMessage = 'Please enter a valid email address';
         break;
       case 'auth/weak-password':
-        errorMessage = 'Password should be at least 6 characters';
+        errorMessage = 'Password should be at least 6 characters long';
         break;
+      case 'auth/operation-not-allowed':
+        errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+        break;
+      case 'auth/network-request-failed':
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+        break;
+      case 'auth/too-many-requests':
+        errorMessage = 'Too many requests. Please wait a moment and try again.';
+        break;
+      default:
+        errorMessage = error.message || 'Registration failed. Please try again.';
     }
     throw new Error(errorMessage);
   }
@@ -84,30 +106,42 @@ export const signUp = async (
 
 export const login = async (email: string, password: string): Promise<UserCredential> => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    
-    if (!userCredential.user.emailVerified) {
-      await signOut(auth);
-      throw new Error('Please verify your email before logging in');
+    // Validate inputs
+    if (!email || !password) {
+      throw new Error('Please enter both email and password');
     }
 
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    
+    // No email verification required - user can access everything after login
     return userCredential;
   } catch (error: any) {
     let errorMessage = 'Login failed';
-    switch (error.code || error.message) {
+    
+    switch (error.code) {
       case 'auth/user-not-found':
-        errorMessage = 'User not found';
+        errorMessage = 'No account found with this email address. Please sign up first.';
         break;
       case 'auth/wrong-password':
-        errorMessage = 'Incorrect password';
+      case 'auth/invalid-credential':
+        errorMessage = 'Incorrect email or password. Please try again.';
         break;
       case 'auth/too-many-requests':
-        errorMessage = 'Too many attempts. Try again later';
+        errorMessage = 'Too many failed attempts. Please wait a moment and try again.';
         break;
-      case 'Please verify your email before logging in':
-        errorMessage = error.message;
+      case 'auth/user-disabled':
+        errorMessage = 'This account has been disabled. Please contact support.';
         break;
+      case 'auth/invalid-email':
+        errorMessage = 'Please enter a valid email address.';
+        break;
+      case 'auth/network-request-failed':
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+        break;
+      default:
+        errorMessage = error.message || 'Login failed. Please try again.';
     }
+    
     throw new Error(errorMessage);
   }
 };
@@ -173,26 +207,74 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   }
 };
 
-export const sendVerificationEmail = async (user: User): Promise<void> => {
+export const sendVerificationEmail = async (user?: User): Promise<void> => {
   try {
-    await sendEmailVerification(user, {
-      url: window.location.origin + '/login',
-      handleCodeInApp: true
+    const currentUser = user || auth.currentUser;
+    if (!currentUser) {
+      throw new Error('No user is currently logged in');
+    }
+    
+    await sendEmailVerification(currentUser, {
+      url: window.location.origin + '/AuthPage',
+      handleCodeInApp: false
     });
-    toast.success('Verification email sent! Please check your inbox.');
-  } catch (error) {
+    toast.success('Verification email sent! Please check your inbox and spam folder.');
+  } catch (error: any) {
     console.error('Error sending verification email:', error);
-    throw new Error('Failed to send verification email');
+    let errorMessage = 'Failed to send verification email';
+    switch (error.code) {
+      case 'auth/too-many-requests':
+        errorMessage = 'Too many requests. Please wait before requesting another verification email';
+        break;
+      default:
+        errorMessage = error.message || 'Failed to send verification email. Please try again';
+    }
+    throw new Error(errorMessage);
+  }
+};
+
+// Function to resend verification email for current user
+export const resendVerificationEmail = async (): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No user is currently logged in');
+    }
+    
+    if (user.emailVerified) {
+      toast.info('Your email is already verified!');
+      return;
+    }
+    
+    await sendVerificationEmail(user);
+  } catch (error) {
+    console.error('Error resending verification email:', error);
+    throw error;
   }
 };
 
 export const resetPassword = async (email: string): Promise<void> => {
   try {
-    await sendPasswordResetEmail(auth, email);
+    await sendPasswordResetEmail(auth, email, {
+      url: window.location.origin + '/AuthPage',
+      handleCodeInApp: false
+    });
+    toast.success('Password reset email sent! Please check your inbox and spam folder.');
   } catch (error: any) {
+    console.error('Password reset error:', error);
     let errorMessage = 'Failed to send reset email';
-    if (error.code === 'auth/user-not-found') {
-      errorMessage = 'User not found';
+    switch (error.code) {
+      case 'auth/user-not-found':
+        errorMessage = 'No account found with this email address';
+        break;
+      case 'auth/invalid-email':
+        errorMessage = 'Invalid email address';
+        break;
+      case 'auth/too-many-requests':
+        errorMessage = 'Too many requests. Please wait before trying again';
+        break;
+      default:
+        errorMessage = error.message || 'Failed to send reset email. Please try again';
     }
     throw new Error(errorMessage);
   }

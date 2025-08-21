@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { signUp } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
-
 const SignUpForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -10,7 +8,6 @@ const SignUpForm: React.FC = () => {
   const [role, setRole] = useState<'student' | 'instructor'>('student');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +16,8 @@ const SignUpForm: React.FC = () => {
     
     try {
       await signUp(email, password, role, firstName, lastName);
-      navigate(role === 'instructor' ? '/instructor-dashboard' : '/courses');
+      // After successful signup, user will be automatically logged in
+      // and AuthContext will handle the navigation
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
-import { getCourses } from '../services/api';
+import { Navigate } from 'react-router-dom';
+import { getAllCourses } from '../services/courseService';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Course } from '../types';
@@ -40,10 +40,11 @@ const ExplorePage = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const data = await getCourses();
+        const data = await getAllCourses();
         setCourses(data);
         setFilteredCourses(data);
       } catch (error) {
+        console.error('Error fetching courses:', error);
         toast.error('Failed to fetch courses');
       } finally {
         setLoading(false);

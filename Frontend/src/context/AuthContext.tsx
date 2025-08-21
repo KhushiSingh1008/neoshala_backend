@@ -1,15 +1,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthResponse } from '../types';
-import { login as loginApi, register as registerApi } from '../services/api';
+import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase/firebaseConfig';
+import { 
+  signUp, 
+  login as firebaseLogin, 
+  logout as firebaseLogout 
+} from '../services/authService';
 import { toast } from 'react-toastify';
-import { getNotificationsForUser } from '../services/notificationService';
+import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
+  firebaseUser: FirebaseUser | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (userData: { username: string; email: string; password: string; role: 'student' | 'instructor' }) => Promise<void>;
-  logout: () => void;
+  register: (userData: { 
+    username: string; 
+    email: string; 
+    password: string; 
+    role: 'student' | 'instructor' 
+  }) => Promise<void>;
+  logout: () => Promise<void>;
   updateUserData: (userData: Partial<User>) => void;
   loading: boolean;
   error: string | null;
@@ -19,26 +31,117 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    let isMounted = true;
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!isMounted) return;
+
+      try {
+        setFirebaseUser(firebaseUser);
+        
+        if (firebaseUser) {
+          // Get Firebase ID token
+          try {
+            const idToken = await firebaseUser.getIdToken();
+            if (isMounted) setToken(idToken);
+          } catch (tokenError) {
+            console.error('Error getting token:', tokenError);
+          }
+          
+          // Try to get user data from Firestore with timeout
+          try {
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userDoc = await Promise.race([
+              getDoc(userDocRef),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Timeout')), 5000)
+              )
+            ]);
+            
+            if (isMounted) {
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const user: User = {
+                  id: firebaseUser.uid,
+                  _id: firebaseUser.uid,
+                  username: userData.firstName && userData.lastName 
+                    ? `${userData.firstName} ${userData.lastName}` 
+                    : firebaseUser.displayName || userData.username || 'User',
+                  email: firebaseUser.email || '',
+                  role: userData.role || 'student',
+                  location: userData.location,
+                  age: userData.age,
+                  bio: userData.bio,
+                  profilePicture: firebaseUser.photoURL || userData.photoURL,
+                  emailNotifications: userData.emailNotifications ?? true,
+                  isVerified: firebaseUser.emailVerified,
+                  createdAt: userData.createdAt?.toDate(),
+                };
+                setUser(user);
+              } else {
+                // Create basic user from Firebase data
+                const user: User = {
+                  id: firebaseUser.uid,
+                  _id: firebaseUser.uid,
+                  username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                  email: firebaseUser.email || '',
+                  role: 'student',
+                  emailNotifications: true,
+                  isVerified: firebaseUser.emailVerified,
+                };
+                setUser(user);
+              }
+            }
+          } catch (firestoreError) {
+            console.error('Firestore error:', firestoreError);
+            // Fallback to Firebase user data
+            if (isMounted) {
+              const user: User = {
+                id: firebaseUser.uid,
+                _id: firebaseUser.uid,
+                username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                email: firebaseUser.email || '',
+                role: 'student',
+                emailNotifications: true,
+                isVerified: firebaseUser.emailVerified,
+              };
+              setUser(user);
+            }
+          }
+        } else {
+          if (isMounted) {
+            setUser(null);
+            setToken(null);
+          }
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
+        if (isMounted) {
+          setError('Authentication error occurred');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const updateUserData = (userData: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
     }
   };
 
@@ -46,57 +149,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       setError(null);
-      const response: AuthResponse = await loginApi({ email, password });
-      setToken(response.token);
-      setUser(response.user);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Explicitly wait for token to be set before fetching notifications
-      if (response.user?.role === 'instructor') {
-        console.log('Instructor logged in, fetching notifications...');
-        setTimeout(() => {
-          getNotificationsForUser(response.user._id);
-        }, 500); // Add a small delay to ensure token is set in storage
-      }
-      
+      await firebaseLogin(email, password);
       toast.success('Login successful!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-      toast.error(err instanceof Error ? err.message : 'Login failed');
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (userData: { username: string; email: string; password: string; role: 'student' | 'instructor' }) => {
+  const register = async (userData: { 
+    username: string; 
+    email: string; 
+    password: string; 
+    role: 'student' | 'instructor' 
+  }) => {
     try {
       setLoading(true);
       setError(null);
-      const response: AuthResponse = await registerApi(userData);
-      setToken(response.token);
-      setUser(response.user);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      toast.success('Registration successful!');
+      
+      const [firstName, lastName] = userData.username.split(' ');
+      await signUp(
+        userData.email, 
+        userData.password, 
+        userData.role, 
+        firstName || userData.username, 
+        lastName || ''
+      );
+      
+      toast.success('Registration successful! You can now access all features.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-      toast.error(err instanceof Error ? err.message : 'Registration failed');
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    toast.success('Logged out successfully!');
+  const logout = async () => {
+    try {
+      setLoading(true);
+      await firebaseLogout();
+      setToken(null);
+      setUser(null);
+      toast.success('Logged out successfully!');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Logout failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, updateUserData, loading, error }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      firebaseUser, 
+      token,
+      login, 
+      register, 
+      logout, 
+      updateUserData, 
+      loading, 
+      error 
+    }}>
       {children}
     </AuthContext.Provider>
   );

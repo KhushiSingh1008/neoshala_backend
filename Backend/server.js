@@ -59,13 +59,50 @@ app.use('/api/admin', adminRoutes);
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/neoshala';
 
-mongoose.connect(MONGO_URI)
+console.log('Attempting to connect to MongoDB...');
+console.log('MongoDB URI:', MONGO_URI.replace(/\/\/.*@/, '//***:***@')); // Hide credentials in logs
+
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
   .then(() => {
-    console.log('Connected to MongoDB');
+    console.log('✅ Successfully connected to MongoDB');
+    console.log('Database:', mongoose.connection.db.databaseName);
+    
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+      console.log(`📊 MongoDB Compass connection string: ${MONGO_URI}`);
     });
   })
   .catch((error) => {
-    console.error('MongoDB connection error:', error);
-  }); 
+    console.error('❌ MongoDB connection error:', error.message);
+    console.error('Please ensure MongoDB is running and the connection string is correct');
+    process.exit(1);
+  });
+
+// Handle MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('📡 Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('📡 Mongoose disconnected from MongoDB');
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('📡 MongoDB connection closed through app termination');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during graceful shutdown:', error);
+    process.exit(1);
+  }
+}); 

@@ -15,26 +15,16 @@ const ForgotPassword: React.FC = () => {
       setStatus('loading');
       setMessage('Sending password reset email...');
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStatus('success');
-        setMessage(data.message || 'Password reset email sent successfully! Please check your email.');
-      } else {
-        setStatus('error');
-        setMessage(data.message || 'Failed to send password reset email. Please try again or contact support.');
-      }
+      // Import resetPassword function from authService
+      const { resetPassword } = await import('../services/authService');
+      await resetPassword(email);
+      
+      setStatus('success');
+      setMessage('Password reset email sent successfully! Please check your email.');
     } catch (error) {
       setStatus('error');
-      setMessage('An error occurred while sending password reset email. Please try again later.');
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while sending password reset email. Please try again later.';
+      setMessage(errorMessage);
       console.error('Forgot password error:', error);
     }
   };

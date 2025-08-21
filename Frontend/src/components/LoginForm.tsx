@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
 import { login } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { userRole } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

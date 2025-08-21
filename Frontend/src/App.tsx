@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { checkFirebaseConnection } from './utils/firebaseChecker';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { NotificationProvider } from './context/NotificationContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import CheckoutPage from './pages/CheckoutPage';
@@ -24,14 +26,21 @@ import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 const App = () => {
+  useEffect(() => {
+    checkFirebaseConnection().then(success => {
+      console.log('Initial Firebase check completed:', success ? '✅ Success' : '❌ Failed');
+    });
+  }, []);
+
   return (
-    <Router>
-      <AuthProvider>
-        <CartProvider>
-          <NotificationProvider>
-            <div className="app-container">
-              <Navbar />
-              <main>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <CartProvider>
+            <NotificationProvider>
+              <div className="app-container">
+                <Navbar />
+                <main>
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Home />} />
@@ -41,7 +50,7 @@ const App = () => {
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
-
+                  
                   {/* Protected Routes - Student Access */}
                   <Route path="/cart" element={
                     <ProtectedRoute requiredRole="student">
@@ -99,11 +108,12 @@ const App = () => {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </main>
-            </div>
-          </NotificationProvider>
-        </CartProvider>
-      </AuthProvider>
-    </Router>
+              </div>
+            </NotificationProvider>
+          </CartProvider>
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 };
 
