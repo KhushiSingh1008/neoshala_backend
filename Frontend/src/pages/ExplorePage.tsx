@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { getAllCourses } from '../services/courseService';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { toast } from 'react-toastify';
 import { Course } from '../types';
 import { FaStar, FaMapMarkerAlt, FaClock, FaHeart, FaSearch, FaFilter } from 'react-icons/fa';
 import { MdCategory } from 'react-icons/md';
 import './ExplorePage.css';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 interface Filters {
   location: string;
@@ -31,6 +33,8 @@ const ExplorePage = () => {
     level: ''
   });
   const { user, token } = useAuth();
+  const { addToCart, isInCart } = useCart();
+  const navigate = useNavigate();
 
   // Redirect instructors to home page
   if (user?.role === 'instructor') {
@@ -59,7 +63,7 @@ const ExplorePage = () => {
       if (!user?._id || !token) return;
 
       try {
-        const response = await fetch(`http://localhost:5000/api/users/${user._id}/favorites`, {
+        const response = await fetch(`${API_URL}/api/users/${user._id}/favorites`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -134,7 +138,7 @@ const ExplorePage = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${user._id}/favorites/${courseId}`, {
+      const response = await fetch(`${API_URL}/api/users/${user._id}/favorites/${courseId}`, {
         method: favorites.includes(courseId) ? 'DELETE' : 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -179,6 +183,20 @@ const ExplorePage = () => {
   };
 
   // Get unique values for filters
+  const handleCardClick = (id: string) => {
+    navigate(`/course/${id}`);
+  };
+
+  const handleAddToCart = (e: React.MouseEvent, course: Course) => {
+    e.stopPropagation();
+    if (isInCart(course._id)) {
+      toast.info('Course is already in your cart');
+      return;
+    }
+    addToCart(course);
+    toast.success('Course added to cart');
+  };
+
   const locations = Array.from(new Set(courses.map(course => course.location)));
   const categories = Array.from(new Set(courses.map(course => course.category)));
   const levels = ['Beginner', 'Intermediate', 'Advanced'];
@@ -281,9 +299,9 @@ const ExplorePage = () => {
         <div className="courses-grid">
           {filteredCourses.map((course) => (
             <div key={course._id} className="course-card">
-              <div className="course-image-container" onClick={() => window.location.href = `/course/${course._id}`}>
+              <div className="course-image-container" onClick={() => navigate(`/course/${course._id}`)}>
                 <img
-                  src={course.imageUrl?.startsWith('http') ? course.imageUrl : `http://localhost:5000${course.imageUrl}` || 'https://via.placeholder.com/300x200'}
+                  src={course.imageUrl?.startsWith('http') ? course.imageUrl : `${API_URL}${course.imageUrl}` || 'https://via.placeholder.com/300x200'}
                   alt={course.title}
                   className="course-image"
                   onError={(e) => {
@@ -304,7 +322,7 @@ const ExplorePage = () => {
                 )}
               </div>
               <div className="course-content">
-                <h2 onClick={() => window.location.href = `/course/${course._id}`}>{course.title}</h2>
+                <h2 onClick={() => navigate(`/course/${course._id}`)}>{course.title}</h2>
                 <p className="instructor">By {course.instructor?.username}</p>
                 
                 <div className="course-details">
@@ -326,6 +344,16 @@ const ExplorePage = () => {
                   </div>
                 </div>
                 <div className="course-price">₹{course.price}</div>
+                {user?.role === 'student' && (
+                  <div className="card-actions">
+                    <button 
+                      className="add-to-cart-button"
+                      onClick={(e) => handleAddToCart(e, course)}
+                    >
+                      {isInCart(course._id) ? 'In Cart' : 'Add to Cart'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
