@@ -1,5 +1,4 @@
 import { auth, db } from '../firebase/firebaseConfig';
-import { connectAuthEmulator, connectFirestoreEmulator } from 'firebase/auth';
 
 export const debugFirebaseConfig = () => {
   console.log('🔥 Firebase Debug Information:');
