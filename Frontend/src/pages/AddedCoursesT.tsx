@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { createCourse, getCourses } from '../services/api';
 import { toast } from 'react-toastify';
 import { Course, CourseFormData } from '../types';
 import './AddedCoursesT.css';
 import { useNavigate } from 'react-router-dom';
+import { getInstructorCourses } from '../services/courseService';
 
 const AddedCoursesT = () => {
   const { user, token } = useAuth();
@@ -40,13 +40,12 @@ const AddedCoursesT = () => {
   }, [user, token]);
 
   const fetchCourses = async () => {
-    if (!user || !token) return;
+    if (!user) return;
     try {
       setLoading(true);
       setError(null);
-      const data = await getCourses();
-      const instructorCourses = data.filter((course: Course) => course.instructor._id === user._id);
-      setCourses(instructorCourses);
+      const data = await getInstructorCourses(user._id);
+      setCourses(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch courses');
       toast.error(err instanceof Error ? err.message : 'Failed to fetch courses');

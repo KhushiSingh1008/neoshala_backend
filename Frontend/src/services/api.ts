@@ -187,4 +187,77 @@ export const updateEmailNotifications = async (token: string, enabled: boolean):
   console.log('API response for email notifications update:', result);
   
   return result;
+};
+
+// Create an api object with all the functions for easier imports
+export const api = {
+  get: async (url: string, token?: string) => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`${API_URL}${url}`, {
+      method: 'GET',
+      headers,
+    });
+    
+    return handleResponse(response);
+  },
+  
+  post: async (url: string, data: any, token?: string) => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`${API_URL}${url}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+    
+    return handleResponse(response);
+  },
+  
+  put: async (url: string, data: any, token?: string) => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`${API_URL}${url}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    });
+    
+    return handleResponse(response);
+  },
+  
+  delete: async (url: string, token?: string) => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(`${API_URL}${url}`, {
+      method: 'DELETE',
+      headers,
+    });
+    
+    return handleResponse(response);
+  }
 }; 

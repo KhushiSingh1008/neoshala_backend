@@ -4,30 +4,72 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import jwt from 'jsonwebtoken';
 import userRoutes from './routes/userRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
+import Message from './models/Message.js';
+import Course from './models/Course.js';
+import CourseEnrollment from './models/CourseEnrollment.js';
 import fs from 'fs';
 
 dotenv.config();
 
 const app = express();
+const server = createServer(app);
 
 // Get current directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configure CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://localhost:5173'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security headers
+app.use((req, res, next) => {
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  res.header('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -48,12 +90,181 @@ if (!fs.existsSync(courseImagesDir)) {
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Initialize Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Socket.IO authentication middleware
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token;
+    if (!token) {
+      return next(new Error('Authentication error: No token provided'));
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.userId;
+    socket.userRole = decoded.role;
+    next();
+  } catch (error) {
+    next(new Error('Authentication error: Invalid token'));
+  }
+});
+
+// Socket.IO connection handling
+io.on('connection', async (socket) => {
+  console.log(`User ${socket.userId} connected to Socket.IO`);
+
+  // Join course room
+  socket.on('join-course', async (courseId) => {
+    try {
+      // Verify user has access to this course
+      const course = await Course.findById(courseId);
+      if (!course) {
+        socket.emit('error', { message: 'Course not found' });
+        return;
+      }
+
+      // Check if user is instructor or enrolled
+      const isInstructor = course.instructor.toString() === socket.userId;
+      let isEnrolled = false;
+      
+      if (!isInstructor) {
+        const enrollment = await CourseEnrollment.findOne({
+          courseId: courseId,
+          userId: socket.userId
+        });
+        isEnrolled = !!enrollment;
+      }
+
+      if (!isInstructor && !isEnrolled) {
+        socket.emit('error', { message: 'Access denied. You must be enrolled in this course.' });
+        return;
+      }
+
+      socket.join(`course-${courseId}`);
+      socket.emit('joined-course', { courseId });
+      console.log(`User ${socket.userId} joined course room: course-${courseId}`);
+    } catch (error) {
+      console.error('Error joining course room:', error);
+      socket.emit('error', { message: 'Error joining course room' });
+    }
+  });
+
+  // Handle new messages
+  socket.on('send-message', async (data) => {
+    try {
+      const { courseId, text } = data;
+      
+      if (!courseId || !text || text.trim() === '') {
+        socket.emit('error', { message: 'Course ID and message text are required' });
+        return;
+      }
+
+      // Verify user has access to this course
+      const course = await Course.findById(courseId);
+      if (!course) {
+        socket.emit('error', { message: 'Course not found' });
+        return;
+      }
+
+      // Check if user is instructor or enrolled
+      const isInstructor = course.instructor.toString() === socket.userId;
+      let isEnrolled = false;
+      
+      if (!isInstructor) {
+        const enrollment = await CourseEnrollment.findOne({
+          courseId: courseId,
+          userId: socket.userId
+        });
+        isEnrolled = !!enrollment;
+      }
+
+      if (!isInstructor && !isEnrolled) {
+        socket.emit('error', { message: 'Access denied. You must be enrolled in this course.' });
+        return;
+      }
+
+      // Create and save message
+      const message = new Message({
+        courseId,
+        senderId: socket.userId,
+        text: text.trim()
+      });
+
+      await message.save();
+      await message.populate('senderId', 'username profilePicture');
+
+      // Broadcast message to all users in the course room
+      io.to(`course-${courseId}`).emit('new-message', message);
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      socket.emit('error', { message: 'Error sending message' });
+    }
+  });
+
+  // Leave course room
+  socket.on('leave-course', (courseId) => {
+    socket.leave(`course-${courseId}`);
+    console.log(`User ${socket.userId} left course room: course-${courseId}`);
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    console.log(`User ${socket.userId} disconnected from Socket.IO`);
+  });
+});
+
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({ 
+    message: 'Route not found',
+    path: req.originalUrl 
+  });
+});
+
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error('Global error handler:', error);
+  
+  if (error.name === 'ValidationError') {
+    return res.status(400).json({
+      message: 'Validation Error',
+      errors: Object.values(error.errors).map(err => err.message)
+    });
+  }
+  
+  if (error.name === 'CastError') {
+    return res.status(400).json({
+      message: 'Invalid ID format'
+    });
+  }
+  
+  if (error.code === 11000) {
+    return res.status(400).json({
+      message: 'Duplicate field value'
+    });
+  }
+  
+  res.status(error.status || 500).json({
+    message: error.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+  });
+});
 
 // MongoDB Connection
 const PORT = process.env.PORT || 5000;
@@ -70,10 +281,11 @@ mongoose.connect(MONGO_URI, {
     console.log('✅ Successfully connected to MongoDB');
     console.log('Database:', mongoose.connection.db.databaseName);
     
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
       console.log(`📊 MongoDB Compass connection string: ${MONGO_URI}`);
+      console.log(`🔌 Socket.IO server initialized`);
     });
   })
   .catch((error) => {

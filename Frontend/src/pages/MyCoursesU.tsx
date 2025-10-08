@@ -5,6 +5,7 @@ import { Course } from '../types';
 import { FaStar, FaMapMarkerAlt, FaClock, FaHeart } from 'react-icons/fa';
 import { MdCategory } from 'react-icons/md';
 import { toast } from 'react-toastify';
+import AuthTest from '../components/AuthTest';
 import './MyCoursesU.css';
 
 interface RatingProps {
@@ -38,8 +39,17 @@ const MyCoursesU = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchMyCourses();
-    fetchFavorites();
+    console.log('🔄 MyCoursesU useEffect triggered');
+    console.log('👤 User:', user);
+    console.log('🔑 Token exists:', !!token);
+    
+    if (user && token) {
+      fetchMyCourses();
+      fetchFavorites();
+    } else {
+      console.log('❌ Missing user or token, not fetching courses');
+      setLoading(false);
+    }
   }, [user?._id, token]);
 
   const fetchFavorites = async () => {
@@ -112,23 +122,52 @@ const MyCoursesU = () => {
   };
 
   const fetchMyCourses = async () => {
-    if (!user?._id || !token) return;
+    if (!user?._id || !token) {
+      console.log('❌ Missing user or token:', { hasUser: !!user?._id, hasToken: !!token });
+      setLoading(false);
+      return;
+    }
 
     try {
-      const data = await getStudentCourses(user._id, token);
+      console.log('📚 Fetching enrolled courses for user:', user._id);
+      
+      // Use the new enrolled courses endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/courses/enrolled`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📡 Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ API Error:', errorData);
+        throw new Error(`Failed to fetch enrolled courses: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Enrolled courses data:', data);
       
       // Fetch user ratings for each course
       const coursesWithRatings = await Promise.all(
         data.map(async (course: Course) => {
-          const ratingData = await getUserRating(course._id, user._id);
-          return { ...course, userRating: ratingData.rating };
+          try {
+            const ratingData = await getUserRating(course._id, user._id);
+            return { ...course, userRating: ratingData.rating };
+          } catch (error) {
+            console.error('Error fetching rating for course:', course._id, error);
+            return { ...course, userRating: 0 };
+          }
         })
       );
 
       setCourses(coursesWithRatings);
+      console.log('✅ Courses with ratings:', coursesWithRatings);
     } catch (error) {
-      console.error('Error fetching courses:', error);
-      toast.error('Failed to fetch your courses');
+      console.error('❌ Error fetching courses:', error);
+      toast.error(`Failed to fetch your courses: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -178,7 +217,7 @@ const MyCoursesU = () => {
     );
   }
 
-  if (courses.length === 0) {
+  if (!loading && courses.length === 0) {
     return (
       <div className="no-courses">
         <h2>You haven't enrolled in any courses yet</h2>
@@ -191,6 +230,7 @@ const MyCoursesU = () => {
   return (
     <div className="my-courses-page">
       <h1>My Courses</h1>
+      <AuthTest />
       <div className="courses-grid">
         {courses.map((course) => (
           <div key={course._id} className="course-card">
@@ -243,6 +283,21 @@ const MyCoursesU = () => {
                   rating={course.userRating || 0}
                   onRatingChange={(newRating) => handleRating(course._id, newRating)}
                 />
+              </div>
+              
+              <div className="course-actions">
+                <button 
+                  className="chat-btn"
+                  onClick={() => window.location.href = `/course/${course._id}#chat`}
+                >
+                  💬 Chat with Instructor
+                </button>
+                <button 
+                  className="view-course-btn"
+                  onClick={() => window.location.href = `/course/${course._id}`}
+                >
+                  View Course
+                </button>
               </div>
             </div>
           </div>

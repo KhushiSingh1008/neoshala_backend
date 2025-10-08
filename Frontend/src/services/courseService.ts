@@ -43,6 +43,22 @@ export const getStudentCourses = async (userId: string, token: string): Promise<
   }
 };
 
+// Get courses for a specific instructor
+export const getInstructorCourses = async (instructorId: string): Promise<Course[]> => {
+  try {
+    const response = await fetch(`${API_URL}/api/courses/instructor/${instructorId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return handleResponse<Course[]>(response);
+  } catch (error) {
+    console.error('Error fetching instructor courses:', error);
+    throw error;
+  }
+};
+
 // Get course by ID
 export const getCourseById = async (courseId: string): Promise<Course> => {
   try {

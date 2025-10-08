@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { checkFirebaseConnection } from './utils/firebaseChecker';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -29,9 +28,8 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   useEffect(() => {
-    checkFirebaseConnection().then(success => {
-      console.log('Initial Firebase check completed:', success ? '✅ Success' : '❌ Failed');
-    });
+    console.log('🚀 Neoshala App Starting...');
+    console.log('📡 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:5000');
   }, []);
 
   return (

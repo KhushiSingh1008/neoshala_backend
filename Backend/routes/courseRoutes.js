@@ -532,4 +532,102 @@ router.get('/:id/rating/:userId', async (req, res) => {
   }
 });
 
+// Check enrollment status for a course
+router.get('/:id/enrollment-status', authenticateToken, async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user.userId || req.user.id;
+
+    console.log('🔍 Checking enrollment status - Course:', courseId, 'User:', userId);
+
+    if (!userId) {
+      return res.status(400).json({ message: 'Invalid user token' });
+    }
+
+    // Check if user is the instructor
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    const isInstructor = course.instructor.toString() === userId;
+    console.log('👨‍🏫 Is instructor:', isInstructor);
+    
+    // Check if user is enrolled (if not instructor)
+    let isEnrolled = false;
+    if (!isInstructor) {
+      const enrollment = await CourseEnrollment.findOne({
+        courseId: courseId,
+        userId: userId
+      });
+      isEnrolled = !!enrollment;
+      console.log('🎓 Is enrolled:', isEnrolled);
+    }
+
+    const result = { 
+      isEnrolled: isEnrolled || isInstructor,
+      isInstructor 
+    };
+    
+    console.log('✅ Enrollment status result:', result);
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Error checking enrollment status:', error);
+    res.status(500).json({ message: 'Server error while checking enrollment status' });
+  }
+});
+
+// Get enrolled courses for authenticated user
+router.get('/enrolled', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔍 Enrolled courses request - User from token:', req.user);
+    
+    // Handle both userId and id fields for compatibility
+    const userId = req.user.userId || req.user.id;
+    
+    if (!userId) {
+      console.error('❌ No user ID found in token');
+      return res.status(400).json({ message: 'Invalid user token' });
+    }
+    
+    console.log('👤 Fetching enrollments for user ID:', userId);
+    
+    const enrollments = await CourseEnrollment.find({ userId })
+      .populate({
+        path: 'courseId',
+        populate: {
+          path: 'instructor',
+          select: 'username'
+        }
+      })
+      .sort({ enrollmentDate: -1 });
+
+    console.log('📚 Found enrollments:', enrollments.length);
+
+    if (enrollments.length === 0) {
+      return res.json([]);
+    }
+
+    const enrolledCourses = enrollments.map(enrollment => {
+      if (!enrollment.courseId) {
+        console.warn('⚠️ Enrollment found but course is null:', enrollment._id);
+        return null;
+      }
+      
+      return {
+        ...enrollment.courseId.toObject(),
+        enrollmentDate: enrollment.enrollmentDate,
+        progress: enrollment.progress,
+        status: enrollment.status
+      };
+    }).filter(course => course !== null);
+
+    console.log('✅ Returning enrolled courses:', enrolledCourses.length);
+    res.json(enrolledCourses);
+  } catch (error) {
+    console.error('❌ Error fetching enrolled courses:', error);
+    res.status(500).json({ message: 'Server error while fetching enrolled courses', error: error.message });
+  }
+});
+
 export default router; 
