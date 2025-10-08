@@ -30,28 +30,44 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Configure CORS
-const allowedOrigins = [
+// Support multiple explicit URLs via FRONTEND_URLS (comma-separated) and a primary FRONTEND_URL
+const explicitOrigins = [
   process.env.FRONTEND_URL,
+  ...(process.env.FRONTEND_URLS ? process.env.FRONTEND_URLS.split(',').map(s => s.trim()) : []),
   'http://localhost:5173',
   'http://localhost:3000',
   'https://localhost:5173'
 ].filter(Boolean);
 
-app.use(cors({
+// Allow common hosted domains (Vercel previews and Render) via regex checks
+const originRegexAllowList = [
+  /^https?:\/\/([\w-]+)\.vercel\.app$/i,        // *.vercel.app
+  /^https?:\/\/([\w-]+)\.onrender\.com$/i       // *.onrender.com
+];
+
+const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+    // Allow requests with no origin (mobile apps or curl)
     if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+
+    if (explicitOrigins.includes(origin)) return callback(null, true);
+
+    // Test regex allow list
+    for (const regex of originRegexAllowList) {
+      if (regex.test(origin)) return callback(null, true);
     }
+
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type']
+};
+
+app.use(cors(corsOptions));
+// Handle preflight globally
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -95,7 +111,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (explicitOrigins.includes(origin)) return callback(null, true);
+      for (const regex of originRegexAllowList) {
+        if (regex.test(origin)) return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
     credentials: true
   }

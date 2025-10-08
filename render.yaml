@@ -16,6 +16,8 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: FRONTEND_URLS
+        sync: false
       - key: EMAIL_SERVICE
         sync: false
       - key: EMAIL_USERNAME
