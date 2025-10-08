@@ -31,6 +31,18 @@ const courseSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Instructor credential/certificate for verification by admin
+  instructorCertificateUrl: {
+    type: String
+  },
+  instructorCertificateStatus: {
+    type: String,
+    enum: ['not_provided', 'pending', 'approved', 'rejected'],
+    default: 'not_provided'
+  },
+  instructorCertificateNotes: {
+    type: String
+  },
   price: {
     type: Number,
     required: true

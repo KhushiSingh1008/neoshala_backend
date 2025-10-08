@@ -8,16 +8,22 @@ const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../uploads/course-images');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure upload directories exist
+const courseImagesDir = path.join(__dirname, '../uploads/course-images');
+if (!fs.existsSync(courseImagesDir)) {
+  fs.mkdirSync(courseImagesDir, { recursive: true });
+}
+const certificatesDir = path.join(__dirname, '../uploads/certificates');
+if (!fs.existsSync(certificatesDir)) {
+  fs.mkdirSync(certificatesDir, { recursive: true });
 }
 
 // Configure multer for file storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir);
+    // route determines target dir via req.uploadTarget
+    const target = req.uploadTarget === 'certificate' ? certificatesDir : courseImagesDir;
+    cb(null, target);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -39,7 +45,13 @@ const upload = multer({
   }
 });
 
-// Upload image
+// Pre-router to set target dir based on query ?target=certificate
+router.use((req, res, next) => {
+  req.uploadTarget = req.query.target === 'certificate' ? 'certificate' : 'image';
+  next();
+});
+
+// Upload course image or certificate
 router.post('/', upload.single('image'), (req, res) => {
   try {
     console.log('Upload request received:', req.file);
@@ -48,10 +60,11 @@ router.post('/', upload.single('image'), (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // Return the full URL for the uploaded image
-    const imageUrl = `/uploads/course-images/${req.file.filename}`;
-    console.log('Image uploaded successfully:', imageUrl);
-    res.json({ url: imageUrl });
+    // Return the full URL for the uploaded file
+    const base = req.uploadTarget === 'certificate' ? '/uploads/certificates' : '/uploads/course-images';
+    const fileUrl = `${base}/${req.file.filename}`;
+    console.log('File uploaded successfully:', fileUrl);
+    res.json({ url: fileUrl });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ message: error.message });

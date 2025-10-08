@@ -104,6 +104,12 @@ router.post('/', authenticateToken, isInstructor, async (req, res) => {
       published: false,
       approvalStatus: 'pending'
     };
+
+    // If instructor provided a certificate URL, set status to pending for admin review
+    if (req.body.instructorCertificateUrl) {
+      courseData.instructorCertificateUrl = req.body.instructorCertificateUrl;
+      courseData.instructorCertificateStatus = 'pending';
+    }
     
     // Create and save the course
     const course = new Course(courseData);

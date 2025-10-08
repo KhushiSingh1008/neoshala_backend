@@ -149,3 +149,52 @@ router.get('/stats', authenticateToken, isAdmin, async (req, res) => {
 });
 
 export default router; 
+ 
+// Certificate review endpoints
+// List courses with pending certificates
+router.get('/certificates/pending', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const pending = await mongoose.model('Course').find({ instructorCertificateStatus: 'pending' })
+      .populate('instructor', 'username email')
+      .sort({ createdAt: -1 });
+    res.json(pending);
+  } catch (error) {
+    console.error('Error fetching pending certificates:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Approve certificate
+router.patch('/certificates/:id/approve', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const Course = mongoose.model('Course');
+    const course = await Course.findByIdAndUpdate(
+      req.params.id,
+      { $set: { instructorCertificateStatus: 'approved', instructorCertificateNotes: req.body?.notes || '' } },
+      { new: true }
+    ).populate('instructor', 'username email');
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json({ message: 'Certificate approved', course });
+  } catch (error) {
+    console.error('Error approving certificate:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Reject certificate
+router.patch('/certificates/:id/reject', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const { notes } = req.body;
+    const Course = mongoose.model('Course');
+    const course = await Course.findByIdAndUpdate(
+      req.params.id,
+      { $set: { instructorCertificateStatus: 'rejected', instructorCertificateNotes: notes || '' } },
+      { new: true }
+    ).populate('instructor', 'username email');
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    res.json({ message: 'Certificate rejected', course });
+  } catch (error) {
+    console.error('Error rejecting certificate:', error);
+    res.status(500).json({ message: error.message });
+  }
+});

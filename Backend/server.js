@@ -14,6 +14,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import Message from './models/Message.js';
+import User from './models/User.js';
+import bcrypt from 'bcryptjs';
 import Course from './models/Course.js';
 import CourseEnrollment from './models/CourseEnrollment.js';
 import fs from 'fs';
@@ -280,6 +282,33 @@ mongoose.connect(MONGO_URI, {
   .then(() => {
     console.log('✅ Successfully connected to MongoDB');
     console.log('Database:', mongoose.connection.db.databaseName);
+    // Ensure at least one admin user exists
+    (async () => {
+      try {
+        const existingAdmin = await User.findOne({ role: 'admin' });
+        if (!existingAdmin) {
+          const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+          const adminEmail = process.env.ADMIN_EMAIL || 'admin@neoshala.com';
+          const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';
+          const salt = await bcrypt.genSalt(10);
+          const hashedPassword = await bcrypt.hash(adminPassword, salt);
+          await User.create({
+            username: adminUsername,
+            email: adminEmail,
+            password: hashedPassword,
+            role: 'admin',
+            isVerified: true,
+            emailNotifications: true,
+            createdAt: new Date()
+          });
+          console.log('👑 Admin user auto-provisioned');
+          console.log(`   Username: ${adminUsername}`);
+          console.log(`   Email: ${adminEmail}`);
+        }
+      } catch (seedErr) {
+        console.error('Error ensuring admin user exists:', seedErr);
+      }
+    })();
     
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
